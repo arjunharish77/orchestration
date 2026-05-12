@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Unnatify CRM — Design Critique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="deck-stage.js"></script>
+<style>
+  /* ===== YOUR exact tokens, lifted from frontend/src/theme/theme.ts ===== */
+  :root{
+    --g50:#eef7ee; --g100:#d8ead8; --g200:#b8d8b8; --g300:#91c091;
+    --g400:#65a265; --g500:#3f843f; --g600:#2d6a2d; --g700:#245824;
+    --g800:#1c421c; --g900:#162716;
+    --bg:#f8fcf8;
+    --paper:#ffffff;
+    --line:#e0ede0;
+    --line-2:#cfe1cf;
+    --muted:#526252;
+    --ink:#162716;
+    --sidebar:#162716;
+    --soft:#eef7ee;
+    --warn:#b07a16;
+    --warn-bg:#fbf3df;
+    --bad:#a23a3a;
+    --bad-bg:#fbeaea;
+    --good:#2d6a2d;
+    --good-bg:#e6f4e6;
+  }
+
+  html,body{margin:0;background:#0d1a0d;color:var(--ink);font-family:'Inter',Arial,sans-serif;}
+  deck-stage{--deck-bg:#0d1a0d;}
+  section{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',Arial,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    letter-spacing:-0.005em;
+    overflow:hidden;
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+
+  /* ===== shared layout primitives ===== */
+  .pad{padding:64px 84px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;font-weight:600;letter-spacing:0.16em;
+    text-transform:uppercase;color:var(--g600);
+  }
+  .eyebrow .dot{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--g600);margin-right:10px;vertical-align:1px;}
+  h1.deck-title{font-size:108px;line-height:0.94;font-weight:900;letter-spacing:-0.035em;margin:18px 0 0;color:var(--g900);}
+  h2.section-title{font-size:60px;line-height:1;font-weight:900;letter-spacing:-0.028em;margin:14px 0 0;color:var(--g900);}
+  h3.card-title{font-size:24px;line-height:1.15;font-weight:900;letter-spacing:-0.012em;margin:0;color:var(--g900);}
+  p.lede{font-size:22px;line-height:1.45;color:var(--muted);max-width:1100px;margin:18px 0 0;}
+  p.body{font-size:16px;line-height:1.55;color:var(--muted);margin:0;}
+  .pageno{
+    position:absolute;left:84px;bottom:36px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.18em;
+    color:var(--muted);text-transform:uppercase;
+  }
+  .pagelabel{
+    position:absolute;right:84px;bottom:36px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.18em;
+    color:var(--muted);text-transform:uppercase;
+  }
+
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;
+    height:24px;padding:0 10px;border-radius:6px;
+    font-size:11px;font-weight:800;letter-spacing:0.04em;
+    background:var(--soft);color:var(--g700);border:1px solid var(--line);
+  }
+  .pill.bad{background:var(--bad-bg);color:var(--bad);border-color:#f0c4c4;}
+  .pill.warn{background:var(--warn-bg);color:var(--warn);border-color:#ecd9a4;}
+  .pill.good{background:var(--good-bg);color:var(--g700);border-color:var(--line-2);}
+  .pill.dark{background:#162716;color:#d8ead8;border-color:#162716;}
+
+  /* ===== SLIDE 1: cover ===== */
+  .cover{
+    background:
+      radial-gradient(1200px 700px at 88% 10%, rgba(45,106,45,0.08), transparent 70%),
+      radial-gradient(900px 600px at 5% 95%, rgba(22,39,22,0.05), transparent 60%),
+      var(--bg);
+  }
+  .cover-grid{display:grid;grid-template-columns:1fr 560px;gap:60px;height:100%;align-items:end;padding:84px;box-sizing:border-box;}
+  .cover-meta{display:flex;flex-direction:column;gap:10px;}
+  .cover-meta .row{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:10px 0;font-size:13px;}
+  .cover-meta .row .k{color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.14em;font-size:11px;}
+  .cover-meta .row .v{color:var(--g900);font-weight:800;}
+  .swatch-row{display:flex;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .swatch-row div{flex:1;height:46px;display:flex;align-items:flex-end;padding:6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.7);}
+  .swatch-row div.lite{color:var(--g700);}
+  .logo-mark{
+    width:64px;height:64px;border-radius:10px;background:var(--g600);
+    display:grid;place-items:center;color:#fff;font-weight:900;font-size:30px;
+    box-shadow:0 12px 28px rgba(22,39,22,0.18);
+  }
+
+  /* ===== SLIDE 2: diagnosis grid ===== */
+  .diag-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:36px;flex:1;}
+  .diag-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:10px;
+    padding:22px 22px 18px;display:flex;flex-direction:column;gap:10px;position:relative;
+  }
+  .diag-card .num{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.16em;
+  }
+  .diag-card.warn{border-left:3px solid var(--warn);}
+  .diag-card.bad{border-left:3px solid var(--bad);}
+  .diag-card.good{border-left:3px solid var(--g600);}
+  .diag-card .tag{position:absolute;top:18px;right:18px;}
+
+  /* ===== SLIDE 3: type system before/after ===== */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px;flex:1;}
+  .ba-pane{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:24px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden;}
+  .ba-pane .ba-tag{position:absolute;top:16px;right:16px;}
+  .ba-pane h4{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:0.16em;color:var(--muted);font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+  .type-row{display:flex;align-items:baseline;gap:18px;padding:12px 0;border-top:1px dashed var(--line);}
+  .type-row:first-of-type{border-top:none;}
+  .type-row .label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);width:84px;flex-shrink:0;letter-spacing:0.1em;}
+  .type-row .sample{flex:1;color:var(--g900);}
+  .type-row .meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);flex-shrink:0;}
+
+  /* ===== density / spacing visualization ===== */
+  .density-stack{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .density-row{
+    display:grid;grid-template-columns:32px 1.6fr 1fr 1fr 80px;
+    gap:12px;align-items:center;background:#fff;font-size:12px;
+  }
+  .density-row.head{background:var(--soft);font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;font-weight:800;padding:8px 12px;}
+  .density-row.tight{padding:5px 12px;}
+  .density-row.relax{padding:11px 12px;}
+  .density-row .av{
+    width:22px;height:22px;border-radius:50%;background:var(--soft);
+    display:grid;place-items:center;font-size:10px;font-weight:900;color:var(--g700);
+  }
+  .density-row .name{color:var(--g900);font-weight:700;}
+  .density-row .muted{color:var(--muted);}
+  .status-chip{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:4px;font-size:10px;font-weight:800;}
+
+  /* ===== SLIDE 4: dashboard mock ===== */
+  .mock-frame{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:0 22px 60px rgba(22,39,22,0.08);
+    overflow:hidden;display:flex;height:100%;
+  }
+  .mock-frame.compact{height:auto;}
+  .m-side{
+    width:200px;background:var(--sidebar);color:#d8ead8;padding:14px 10px;
+    display:flex;flex-direction:column;gap:2px;flex-shrink:0;
+  }
+  .m-side .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 14px;}
+  .m-side .brand .lm{width:26px;height:26px;border-radius:6px;background:var(--g600);display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px;}
+  .m-side .brand .nm{color:#fff;font-weight:900;font-size:14px;}
+  .m-side .nav{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:6px;color:#d8ead8;font-size:12px;font-weight:600;}
+  .m-side .nav.active{background:var(--g50);color:#123d12;font-weight:800;}
+  .m-side .nav .ic{width:14px;height:14px;border:1.6px solid currentColor;border-radius:3px;opacity:0.85;}
+  .m-side .group{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:#65a265;text-transform:uppercase;padding:14px 10px 6px;}
+  .m-main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .m-top{height:46px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;gap:12px;}
+  .m-search{flex:1;max-width:520px;height:30px;border-radius:18px;background:#f8fcf8;border:1px solid transparent;display:flex;align-items:center;padding:0 12px;color:var(--muted);font-size:12px;}
+  .m-avatar{width:28px;height:28px;border-radius:50%;background:var(--g600);color:#fff;display:grid;place-items:center;font-weight:900;font-size:11px;margin-left:auto;}
+  .m-body{padding:16px;display:flex;flex-direction:column;gap:14px;flex:1;}
+  .m-h{display:flex;align-items:flex-end;justify-content:space-between;}
+  .m-h h5{margin:0;font-size:22px;font-weight:900;color:var(--g900);letter-spacing:-0.01em;}
+  .m-h .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .kpi{
+    background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+    display:flex;flex-direction:column;gap:4px;position:relative;
+  }
+  .kpi .lbl{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;}
+  .kpi .val{font-size:30px;font-weight:900;color:var(--g900);line-height:1;letter-spacing:-0.02em;}
+  .kpi .delta{font-size:11px;color:var(--g600);font-weight:800;}
+  .kpi .delta.down{color:var(--bad);}
+  .kpi .spark{height:28px;margin-top:4px;}
+  .kpi.big{grid-column:span 1;}
+
+  /* "before" version of KPI — overdone */
+  .kpi.legacy{
+    background:#f4fbf4;border:1px solid var(--line);
+  }
+  .kpi.legacy::before{
+    content:"";position:absolute;inset:auto -20px -34px auto;width:90px;height:90px;border-radius:50%;background:rgba(45,106,45,0.06);
+  }
+  .kpi.legacy .badge{
+    position:absolute;top:10px;right:10px;background:var(--soft);border:1px solid var(--line);
+    color:var(--g700);font-size:9px;font-weight:900;padding:2px 6px;border-radius:4px;
+  }
+  .kpi.legacy .ic{
+    width:28px;height:28px;border-radius:6px;background:#e6f4e6;display:grid;place-items:center;color:var(--g600);
+  }
+  .kpi.legacy .lbl{margin-top:8px;}
+  .kpi.legacy .val{font-size:24px;}
+
+  .table-mock{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;flex:1;display:flex;flex-direction:column;}
+  .tm-head{display:grid;grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.6fr 60px;gap:10px;padding:10px 14px;background:#fafdfa;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);font-weight:800;}
+  .tm-row{display:grid;grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.6fr 60px;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);font-size:12px;align-items:center;}
+  .tm-row:last-child{border-bottom:none;}
+  .tm-row:hover{background:#fafdfa;}
+  .tm-row .av{width:24px;height:24px;border-radius:50%;background:var(--soft);color:var(--g700);font-weight:900;font-size:10px;display:grid;place-items:center;}
+  .tm-row .name{font-weight:800;color:var(--g700);}
+  .tm-row .m{color:var(--muted);}
+
+  .pill-row{display:flex;gap:6px;flex-wrap:wrap;}
+
+  /* before slide elements */
+  .legacy-frame{filter:saturate(0.85);}
+  .legacy-frame .m-side{background:var(--sidebar);}
+
+  /* SLIDE: status chips before/after */
+  .chip-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:32px;flex:1;}
+  .chip-rail{display:flex;flex-direction:column;gap:14px;}
+  .chip-row{display:flex;align-items:center;gap:10px;}
+  .chip-row .label-w{width:120px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;}
+  .chip-old{background:var(--g100);color:var(--g700);font-weight:900;font-size:11px;height:22px;padding:0 9px;border-radius:6px;display:inline-flex;align-items:center;}
+  .chip-new{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:700;}
+  .chip-new .d{width:6px;height:6px;border-radius:50%;}
+  .chip-new.new{background:var(--g50);color:var(--g700);border:1px solid var(--line);} .chip-new.new .d{background:var(--g500);}
+  .chip-new.assigned{background:#eef3fa;color:#1c4980;border:1px solid #d6e3f0;} .chip-new.assigned .d{background:#1c4980;}
+  .chip-new.progress{background:var(--warn-bg);color:var(--warn);border:1px solid #ecd9a4;} .chip-new.progress .d{background:var(--warn);}
+  .chip-new.converted{background:var(--g50);color:var(--g800);border:1px solid var(--g200);} .chip-new.converted .d{background:var(--g700);}
+  .chip-new.lost{background:var(--bad-bg);color:var(--bad);border:1px solid #f0c4c4;} .chip-new.lost .d{background:var(--bad);}
+
+  /* SLIDE: principles list */
+  .principles{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:32px;flex:1;}
+  .pr{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:10px;}
+  .pr .num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--g600);letter-spacing:0.16em;}
+  .pr h3{margin:0;font-size:22px;font-weight:900;letter-spacing:-0.012em;color:var(--g900);}
+  .pr p{margin:0;color:var(--muted);font-size:14px;line-height:1.55;}
+
+  /* roadmap */
+  .roadmap{margin-top:30px;flex:1;display:flex;flex-direction:column;gap:0;}
+  .road-row{display:grid;grid-template-columns:120px 200px 1fr 140px;gap:18px;padding:18px 0;border-top:1px solid var(--line);align-items:center;}
+  .road-row:last-child{border-bottom:1px solid var(--line);}
+  .road-when{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--g600);}
+  .road-what{font-size:18px;font-weight:900;color:var(--g900);}
+  .road-why{font-size:13.5px;color:var(--muted);line-height:1.5;}
+  .road-eff{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;}
+  .bars{display:flex;gap:2px;}
+  .bars div{width:6px;height:14px;background:var(--line);border-radius:1px;}
+  .bars div.on{background:var(--g600);}
+
+  /* sidebar before/after */
+  .sb-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px;flex:1;}
+  .sb-pane{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+  .sb-pane .ba-tag{position:absolute;top:14px;right:14px;z-index:2;}
+  .sb-shell{display:flex;height:480px;}
+  .sb-side{width:220px;background:var(--sidebar);color:#d8ead8;padding:14px 10px;display:flex;flex-direction:column;gap:2px;flex-shrink:0;}
+  .sb-stage{flex:1;background:var(--bg);}
+
+  .legend{display:flex;gap:18px;align-items:center;margin-top:14px;}
+  .legend .li{display:flex;align-items:center;gap:6px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);letter-spacing:0.06em;}
+  .legend .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line);}
+
+  /* lead detail teaser */
+  .ld-grid{display:grid;grid-template-columns:280px 1fr 320px;gap:14px;flex:1;}
+  .ld-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .ld-card h6{margin:0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;font-weight:800;}
+  .ld-kv{display:grid;grid-template-columns:1fr 1.4fr;gap:6px 12px;font-size:12px;}
+  .ld-kv .k{color:var(--muted);}
+  .ld-kv .v{color:var(--g900);font-weight:700;}
+  .ld-tabs{display:flex;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:3px;}
+  .ld-tabs .tab{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:800;color:var(--g900);}
+  .ld-tabs .tab.active{background:var(--g600);color:#fff;}
+  .timeline{display:flex;flex-direction:column;gap:12px;}
+  .tl-row{display:grid;grid-template-columns:64px 1fr;gap:14px;padding:10px 0;border-top:1px dashed var(--line);}
+  .tl-row:first-child{border-top:none;}
+  .tl-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.06em;}
+  .tl-title{font-size:13px;font-weight:800;color:var(--g900);}
+  .tl-detail{font-size:12px;color:var(--muted);margin-top:2px;}
+  .tl-icon{width:18px;height:18px;border-radius:50%;background:var(--soft);display:inline-grid;place-items:center;border:1px solid var(--line);margin-right:6px;vertical-align:-3px;}
+
+  /* sparkline svg */
+  .spark path{fill:none;stroke:var(--g600);stroke-width:1.6;}
+  .spark .area{fill:rgba(45,106,45,0.10);stroke:none;}
+
+  /* generic */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+
+  .callout{
+    background:var(--soft);border:1px solid var(--line);
+    border-left:3px solid var(--g600);
+    border-radius:6px;padding:10px 14px;font-size:13px;color:var(--g900);font-weight:600;
+  }
+  .callout strong{font-weight:900;}
+
+</style>
+</head>
+<body>
+
+<script type="application/json" id="speaker-notes">
+[]
+</script>
+
+<deck-stage>
+
+<!-- ============ 01 COVER ============ -->
+<section data-screen-label="01 Cover" class="cover">
+  <div class="cover-grid">
+    <div>
+      <div class="logo-mark">U</div>
+      <div class="eyebrow" style="margin-top:38px;"><span class="dot"></span>Design critique · CRM front-end</div>
+      <h1 class="deck-title">What we can<br>make better<br><span style="color:var(--g600);">in your green.</span></h1>
+      <p class="lede">A focused review of the Unnatify CRM: what the current MUI + green system already does well, where it's working against itself, and ten concrete improvements — all using the exact tokens already defined in <span class="mono" style="color:var(--g700);">theme.ts</span>.</p>
+    </div>
+    <div class="cover-meta">
+      <div class="swatch-row">
+        <div style="background:var(--g50);" class="lite">50</div>
+        <div style="background:var(--g100);" class="lite">100</div>
+        <div style="background:var(--g300);">300</div>
+        <div style="background:var(--g500);">500</div>
+        <div style="background:var(--g600);">600</div>
+        <div style="background:var(--g700);">700</div>
+        <div style="background:var(--g900);">900</div>
+      </div>
+      <div class="row"><span class="k">Stack</span><span class="v">Next.js · MUI v6 · DataGrid</span></div>
+      <div class="row"><span class="k">Surface area</span><span class="v">11 modules · 1 shell</span></div>
+      <div class="row"><span class="k">Palette</span><span class="v">10-stop green + neutrals</span></div>
+      <div class="row"><span class="k">Scope of this deck</span><span class="v">Visual + UX, not code</span></div>
+      <div class="row" style="border-bottom:1px solid var(--line);"><span class="k">Constraint</span><span class="v">No new colors. No new fonts.</span></div>
+    </div>
+  </div>
+  <div class="pageno">01 / 10</div>
+  <div class="pagelabel">Cover</div>
+</section>
+
+<!-- ============ 02 DIAGNOSIS ============ -->
+<section data-screen-label="02 Diagnosis">
+  <div class="pad">
+    <div class="eyebrow"><span class="dot"></span>Diagnosis</div>
+    <h2 class="section-title">The system has good bones.<br>Six things are quietly hurting it.</h2>
+    <p class="lede">Most of these are inherited from leaning hard on raw MUI defaults plus a very saturated single-hue palette. None require a redesign — they're tuning, not surgery.</p>
+
+    <div class="diag-grid">
+      <div class="diag-card bad">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span class="num">01</span><span class="pill bad">Hierarchy</span>
+        </div>
+        <h3 class="card-title">Everything is fontWeight 900.</h3>
+        <p class="body">h4, h5, h6, body chips, button labels, table cells — all bolded. With nothing lighter to push against, nothing reads as primary. Headings disappear into rows.</p>
+      </div>
+      <div class="diag-card bad">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span class="num">02</span><span class="pill bad">Density</span>
+        </div>
+        <h3 class="card-title">Type sizes 11.5–13.5px, rows 40px.</h3>
+        <p class="body">Compact is fine for power users, but the gap between a 13.5px h6 and 12.5px body collapses the type ramp. Headings and data look the same size.</p>
+      </div>
+      <div class="diag-card warn">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span class="num">03</span><span class="pill warn">Color</span>
+        </div>
+        <h3 class="card-title">Green carries every signal.</h3>
+        <p class="body">Status, primary action, header bg, hover, selection, sparkline, avatar, success — all the same hue. There's no way to tell "this row is converted" from "this row is selected" at a glance.</p>
+      </div>
+      <div class="diag-card warn">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span class="num">04</span><span class="pill warn">Surface</span>
+        </div>
+        <h3 class="card-title">Decoration on KPI cards.</h3>
+        <p class="body">The dashboard tiles use a soft tint, a circular before-pseudo, a pill, an icon, and a label — to display one number. That's five visual layers fighting for the value.</p>
+      </div>
+      <div class="diag-card warn">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span class="num">05</span><span class="pill warn">Radius</span>
+        </div>
+        <h3 class="card-title">Inconsistent corner system.</h3>
+        <p class="body">Theme says <span class="mono">borderRadius: 8</span>, but components use 1, 1.5, 1.6, 2, 4, 6, 8, 99. Pills, panels, sections, and search bars all disagree. Pick three.</p>
+      </div>
+      <div class="diag-card good">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span class="num">06</span><span class="pill good">Working</span>
+        </div>
+        <h3 class="card-title">What's already great.</h3>
+        <p class="body">Dark sidebar / light canvas split, the saved-views pattern, advanced filter builder, the compact data grid, and disciplined use of CSS variables for tokens. Keep those.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">02 / 10</div>
+  <div class="pagelabel">Diagnosis</div>
+</section>
+
+<!-- ============ 03 TYPE ============ -->
+<section data-screen-label="03 Type system">
+  <div class="pad">
+    <div class="eyebrow"><span class="dot"></span>Improvement 01 · Typography</div>
+    <h2 class="section-title">Give weight a job again.</h2>
+    <p class="lede">Today every heading is 900 and every body is 12.5px. That leaves no contrast. Same family (Inter), but use the full weight range and widen the size gaps.</p>
+
+    <div class="ba">
+      <div class="ba-pane">
+        <span class="ba-tag pill bad">Today</span>
+        <h4>Theme.ts (current)</h4>
+        <div class="type-row"><span class="label">h4 / 900</span><span class="sample" style="font-size:19px;font-weight:900;">Lead overview for today</span><span class="meta">19px · w900</span></div>
+        <div class="type-row"><span class="label">h5 / 900</span><span class="sample" style="font-size:17px;font-weight:900;">Lead overview for today</span><span class="meta">17px · w900</span></div>
+        <div class="type-row"><span class="label">h6 / 900</span><span class="sample" style="font-size:13.5px;font-weight:900;">Lead overview for today</span><span class="meta">13.5px · w900</span></div>
+        <div class="type-row"><span class="label">body1 / —</span><span class="sample" style="font-size:12.5px;color:var(--muted);">Customer reached out about premium plan upgrade.</span><span class="meta">12.5px</span></div>
+        <div class="type-row"><span class="label">body2 / —</span><span class="sample" style="font-size:11.5px;color:var(--muted);">Customer reached out about premium plan upgrade.</span><span class="meta">11.5px</span></div>
+        <div style="margin-top:12px;color:var(--bad);font-size:13px;font-weight:700;">— Headings only 1.5px bigger than body. h6 looks like a label, not a heading. Everything is 900.</div>
+      </div>
+      <div class="ba-pane">
+        <span class="ba-tag pill good">Proposed</span>
+        <h4>Stronger ramp · same family</h4>
+        <div class="type-row"><span class="label">h2 / 800</span><span class="sample" style="font-size:32px;font-weight:800;letter-spacing:-0.018em;">Lead overview for today</span><span class="meta">32 · w800</span></div>
+        <div class="type-row"><span class="label">h3 / 800</span><span class="sample" style="font-size:22px;font-weight:800;letter-spacing:-0.012em;">Lead overview for today</span><span class="meta">22 · w800</span></div>
+        <div class="type-row"><span class="label">h6 / 600</span><span class="sample" style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">Lead overview for today</span><span class="meta">11 · w700 · caps</span></div>
+        <div class="type-row"><span class="label">body / 500</span><span class="sample" style="font-size:14px;font-weight:500;color:var(--g900);">Customer reached out about premium plan upgrade.</span><span class="meta">14 · w500</span></div>
+        <div class="type-row"><span class="label">caption / 500</span><span class="sample" style="font-size:12px;font-weight:500;color:var(--muted);">Customer reached out about premium plan upgrade.</span><span class="meta">12 · w500</span></div>
+        <div style="margin-top:12px;color:var(--g700);font-size:13px;font-weight:700;">+ Real size jumps. h6 becomes a caps eyebrow (which the codebase already wants). Body lifts to 14px so leads are scannable.</div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:18px;">
+      <strong>One change to <span class="mono">theme.ts</span>:</strong> drop <span class="mono">fontWeight: 900</span> defaults on h4–h6 and button. Use 700–800 for titles, 600–700 for buttons, 500 for body. <em>Same Inter font, immediately more legible.</em>
+    </div>
+  </div>
+  <div class="pageno">03 / 10</div>
+  <div class="pagelabel">Typography</div>
+</section>
+
+<!-- ============ 04 DASHBOARD KPI BEFORE/AFTER ============ -->
+<section data-screen-label="04 Dashboard KPIs">
+  <div class="pad">
+    <div class="eyebrow"><span class="dot"></span>Improvement 02 · Dashboard KPIs</div>
+    <h2 class="section-title">Show the number. Not the chrome around it.</h2>
+    <p class="lede">Each card today has a tinted background, a circular blob, an icon tile, a pill badge, a label, the value, and a hint. Strip the decoration; let the value be the loudest thing on screen.</p>
+
+    <div class="ba">
+      <div class="ba-pane">
+        <span class="ba-tag pill bad">Today</span>
+        <h4>DashboardMetricCard.tsx (current)</h4>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:6px;">
+          <div class="kpi legacy">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="ic">▦</div><div class="badge">+12%</div>
+            </div>
+            <div class="lbl">Assigned Leads</div>
+            <div class="val">1,284</div>
+            <div class="delta">Across teams and sales groups</div>
+          </div>
+          <div class="kpi legacy">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="ic">↗</div><div class="badge">+5.4%</div>
+            </div>
+            <div class="lbl">Converted</div>
+            <div class="val">386</div>
+            <div class="delta">Converted leads</div>
+          </div>
+          <div class="kpi legacy">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="ic">✓</div><div class="badge">Today</div>
+            </div>
+            <div class="lbl">Open Tasks</div>
+            <div class="val">42</div>
+            <div class="delta">7 missed</div>
+          </div>
+          <div class="kpi legacy">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="ic">⚙</div><div class="badge">Active</div>
+            </div>
+            <div class="lbl">Automation Runs</div>
+            <div class="val">128</div>
+            <div class="delta">2 failed, 4 pending steps</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;color:var(--bad);font-size:13px;font-weight:700;">Five visual elements per tile. Value is only 24px and competes with the icon and badge.</div>
+      </div>
+
+      <div class="ba-pane">
+        <span class="ba-tag pill good">Proposed</span>
+        <h4>Quiet tiles · sparklines · big numerals</h4>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:6px;">
+          <div class="kpi">
+            <div class="lbl">Assigned leads</div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;">
+              <div class="val">1,284</div>
+              <svg class="spark" width="100" height="32" viewBox="0 0 100 32" preserveAspectRatio="none">
+                <path class="area" d="M0 24 L10 22 L20 18 L30 20 L40 14 L50 16 L60 10 L70 12 L80 6 L90 8 L100 4 L100 32 L0 32 Z"/>
+                <path d="M0 24 L10 22 L20 18 L30 20 L40 14 L50 16 L60 10 L70 12 L80 6 L90 8 L100 4"/>
+              </svg>
+            </div>
+            <div class="delta">+12% week over week</div>
+          </div>
+          <div class="kpi">
+            <div class="lbl">Converted</div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;">
+              <div class="val">386</div>
+              <svg class="spark" width="100" height="32" viewBox="0 0 100 32" preserveAspectRatio="none">
+                <path class="area" d="M0 18 L10 20 L20 16 L30 12 L40 14 L50 8 L60 10 L70 6 L80 4 L90 6 L100 2 L100 32 L0 32 Z"/>
+                <path d="M0 18 L10 20 L20 16 L30 12 L40 14 L50 8 L60 10 L70 6 L80 4 L90 6 L100 2"/>
+              </svg>
+            </div>
+            <div class="delta">+5.4% conversion rate · 30d</div>
+          </div>
+          <div class="kpi">
+            <div class="lbl">Open tasks · 7 overdue</div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;">
+              <div class="val" style="color:var(--bad);">42</div>
+              <div style="display:flex;gap:2px;align-items:flex-end;">
+                <div style="width:6px;height:8px;background:var(--g300);border-radius:1px;"></div>
+                <div style="width:6px;height:14px;background:var(--g500);border-radius:1px;"></div>
+                <div style="width:6px;height:10px;background:var(--g500);border-radius:1px;"></div>
+                <div style="width:6px;height:18px;background:var(--g600);border-radius:1px;"></div>
+                <div style="width:6px;height:22px;background:var(--g600);border-radius:1px;"></div>
+                <div style="width:6px;height:24px;background:var(--bad);border-radius:1px;"></div>
+                <div style="width:6px;height:28px;background:var(--bad);border-radius:1px;"></div>
+              </div>
+            </div>
+            <div class="delta down">7 missed today · acts as the alert</div>
+          </div>
+          <div class="kpi">
+            <div class="lbl">Automation runs</div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;">
+              <div class="val">128</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-align:right;line-height:1.4;">
+                <div><span style="color:var(--g700);font-weight:800;">122</span> ok</div>
+                <div><span style="color:var(--bad);font-weight:800;">2</span> failed · <span style="color:var(--warn);font-weight:800;">4</span> pending</div>
+              </div>
+            </div>
+            <div class="delta">Last run 8m ago</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;color:var(--g700);font-size:13px;font-weight:700;">+ Same green palette. Numerals are 30px instead of 24, sparkline replaces the badge, color only appears when there's a real signal.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">04 / 10</div>
+  <div class="pagelabel">KPIs</div>
+</section>
+
+<!-- ============ 05 STATUS CHIPS ============ -->
+<section data-screen-label="05 Status semantics">
+  <div class="pad">
+    <div class="eyebrow"><span class="dot"></span>Improvement 03 · Status semantics</div>
+    <h2 class="section-title">Status needs more than green.</h2>
+    <p class="lede">Today every <span class="mono" style="color:var(--g700);">AppChip</span> renders the same green pill regardless of meaning. The user can't tell at a glance whether a row is New, Converted, or Lost. Add controlled neutral and warm tints — still using your existing palette — and a leading dot.</p>
+
+    <div class="chip-grid">
+      <div class="ba-pane" style="padding:28px;">
+        <span class="ba-tag pill bad">Today</span>
+        <h4>One chip, every meaning</h4>
+        <div class="chip-rail" style="margin-top:14px;">
+          <div class="chip-row"><span class="label-w">New</span><span class="chip-old">New</span></div>
+          <div class="chip-row"><span class="label-w">Assigned</span><span class="chip-old">Assigned</span></div>
+          <div class="chip-row"><span class="label-w">In progress</span><span class="chip-old">In Progress</span></div>
+          <div class="chip-row"><span class="label-w">Converted</span><span class="chip-old">Converted</span></div>
+          <div class="chip-row"><span class="label-w">Lost</span><span class="chip-old">Lost</span></div>
+          <div class="chip-row"><span class="label-w">+12%</span><span class="chip-old">+12%</span></div>
+          <div class="chip-row"><span class="label-w">CSV</span><span class="chip-old">CSV</span></div>
+        </div>
+        <div style="margin-top:18px;color:var(--bad);font-size:13px;font-weight:700;">— A "Lost" lead and a "+12%" KPI badge look identical. Status conveys nothing.</div>
+      </div>
+
+      <div class="ba-pane" style="padding:28px;">
+        <span class="ba-tag pill good">Proposed</span>
+        <h4>Five-tone status, all from your palette</h4>
+        <div class="chip-rail" style="margin-top:14px;">
+          <div class="chip-row"><span class="label-w">New</span><span class="chip-new new"><span class="d"></span>New</span><span class="mono" style="color:var(--muted);font-size:10px;">g50 / g500 / g700</span></div>
+          <div class="chip-row"><span class="label-w">Assigned</span><span class="chip-new assigned"><span class="d"></span>Assigned</span><span class="mono" style="color:var(--muted);font-size:10px;">slate-blue (neutral)</span></div>
+          <div class="chip-row"><span class="label-w">In progress</span><span class="chip-new progress"><span class="d"></span>In progress</span><span class="mono" style="color:var(--muted);font-size:10px;">amber (existing warn token)</span></div>
+          <div class="chip-row"><span class="label-w">Converted</span><span class="chip-new converted"><span class="d"></span>Converted</span><span class="mono" style="color:var(--muted);font-size:10px;">g50 / g700 / g800 · solid dot</span></div>
+          <div class="chip-row"><span class="label-w">Lost</span><span class="chip-new lost"><span class="d"></span>Lost</span><span class="mono" style="color:var(--muted);font-size:10px;">existing error tone</span></div>
+          <div class="chip-row" style="margin-top:8px;border-top:1px solid var(--line);padding-top:14px;"><span class="label-w">Meta tag</span><span class="pill">CSV</span><span class="mono" style="color:var(--muted);font-size:10px;">neutral pill — separate component</span></div>
+          <div class="chip-row"><span class="label-w">Trend</span><span class="pill good">+12%</span><span class="mono" style="color:var(--muted);font-size:10px;">trend pill — separate component</span></div>
+        </div>
+        <div style="margin-top:18px;color:var(--g700);font-size:13px;font-weight:700;">+ Status, meta, and trend become three different shapes. Color earns its meaning back.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">05 / 10</div>
+  <div class="pagelabel">Status</div>
+</section>
+
+<!-- ============ 06 SIDEBAR / SHELL ============ -->
+<section data-screen-label="06 Sidebar">
+  <div class="pad">
+    <div class="eyebrow"><span class="dot"></span>Improvement 04 · Shell &amp; sidebar</div>
+    <h2 class="section-title">Make the active state earn its glow.</h2>
+    <p class="lede">The dark <span class="mono" style="color:var(--g700);">#162716</span> sidebar is great. The selected pill (light <span class="mono" style="color:var(--g700);">g50</span> on dark) works — but the inactive items at <span class="mono" style="color:var(--g700);">#d8ead8</span> are almost as bright. Pull inactive down, give the active item a subtle left rail, and group the nav so settings and admin don't sit beside daily tools.</p>
+
+    <div class="sb-grid">
+      <div class="sb-pane">
+        <span class="ba-tag pill bad">Today</span>
+        <div class="sb-shell">
+          <div class="sb-side">
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 14px;">
+              <div style="width:26px;height:26px;border-radius:6px;background:var(--g600);display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px;">U</div>
+              <div style="color:#fff;font-weight:900;font-size:14px;">Unnatify</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:6px;background:var(--g50);color:#123d12;font-weight:800;font-size:12px;">▦ Dashboard</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#d8ead8;font-size:12px;font-weight:600;">◉ Leads</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#d8ead8;font-size:12px;font-weight:600;">▤ Activities</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#d8ead8;font-size:12px;font-weight:600;">↑ CSV Uploads</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#d8ead8;font-size:12px;font-weight:600;">✓ Tasks</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#d8ead8;font-size:12px;font-weight:600;">★ Automation</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#d8ead8;font-size:12px;font-weight:600;">≡ Reports</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#d8ead8;font-size:12px;font-weight:600;">⚙ Settings</div>
+          </div>
+          <div class="sb-stage"></div>
+        </div>
+        <div style="padding:12px 16px;font-size:12px;color:var(--bad);font-weight:700;">— Inactive items are 84% bright. No grouping. Active state is just a tinted pill.</div>
+      </div>
+
+      <div class="sb-pane">
+        <span class="ba-tag pill good">Proposed</span>
+        <div class="sb-shell">
+          <div class="sb-side">
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 18px;">
+              <div style="width:26px;height:26px;border-radius:6px;background:var(--g600);display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px;">U</div>
+              <div style="color:#fff;font-weight:800;font-size:14px;">Unnatify</div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.16em;color:#65a265;text-transform:uppercase;padding:8px 10px 6px;">Pipeline</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:6px;background:rgba(238,247,238,0.08);color:#fff;font-weight:700;font-size:12.5px;position:relative;">
+              <span style="position:absolute;left:-10px;top:6px;bottom:6px;width:3px;background:var(--g400);border-radius:2px;"></span>
+              ▦ Dashboard
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#91c091;font-size:12.5px;font-weight:500;">◉ Leads <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:#65a265;background:rgba(101,162,101,0.12);border-radius:3px;padding:1px 5px;">128</span></div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#91c091;font-size:12.5px;font-weight:500;">▤ Activities</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#91c091;font-size:12.5px;font-weight:500;">✓ Tasks <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:#fbf3df;background:rgba(176,122,22,0.35);border-radius:3px;padding:1px 5px;">7</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.16em;color:#65a265;text-transform:uppercase;padding:14px 10px 6px;">Operations</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#91c091;font-size:12.5px;font-weight:500;">↑ Uploads</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#91c091;font-size:12.5px;font-weight:500;">★ Automation</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#91c091;font-size:12.5px;font-weight:500;">≡ Reports</div>
+            <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:#91c091;font-size:12.5px;font-weight:500;margin-top:auto;">⚙ Settings</div>
+          </div>
+          <div class="sb-stage"></div>
+        </div>
+        <div style="padding:12px 16px;font-size:12px;color:var(--g700);font-weight:700;">+ Inactive items at <span class="mono">#91c091</span> (g300) — readable but visibly secondary. Active item gets a 3px green rail. Two groups. Numeric badges for queues.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">06 / 10</div>
+  <div class="pagelabel">Sidebar</div>
+</section>
+
+<!-- ============ 07 LEADS TABLE ============ -->
+<section data-screen-label="07 Leads table">
+  <div class="pad">
+    <div class="eyebrow"><span class="dot"></span>Improvement 05 · Leads table</div>
+    <h2 class="section-title">The table is your product. Treat it like one.</h2>
+    <p class="lede">Most users live in <span class="mono" style="color:var(--g700);">LeadsView</span>. Today rows are 40px, hover is a 4.5% tint, the primary cell is solid green &amp; bold (so the eye stops there instead of scanning across), and there's no visual relationship between row and status. Three tweaks fix this without a refactor.</p>
+
+    <div class="mock-frame compact" style="margin-top:24px;">
+      <div class="m-main">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);">
+          <div>
+            <div style="font-size:18px;font-weight:800;color:var(--g900);letter-spacing:-0.012em;">Leads</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">2,840 results · sorted by Last activity</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span class="pill">Saved view: My pipeline</span>
+            <span class="pill dark">+ Add lead</span>
+          </div>
+        </div>
+
+        <div class="table-mock" style="border:none;border-radius:0;flex:0;">
+          <div class="tm-head">
+            <div></div>
+            <div>Lead</div>
+            <div>Email</div>
+            <div>Status</div>
+            <div>Owner</div>
+            <div>Last activity</div>
+            <div>Score</div>
+            <div></div>
+          </div>
+          <div class="tm-row">
+            <div><input type="checkbox" style="accent-color:var(--g600);"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><span class="av">RM</span><div><div class="name">Rohit Mehra</div><div class="m" style="font-size:10.5px;">Acme Logistics · Mumbai</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="99ebf6f1f0edd9f8faf4fcf5f6feb7f0f7">[email&#160;protected]</a></div>
+            <div><span class="chip-new converted"><span class="d"></span>Converted</span></div>
+            <div class="m">Priya S.</div>
+            <div class="m">2h ago</div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:36px;height:4px;background:var(--line);border-radius:2px;overflow:hidden;"><div style="width:88%;height:100%;background:var(--g600);"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--g700);font-weight:800;">88</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="tm-row">
+            <div><input type="checkbox" style="accent-color:var(--g600);"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><span class="av">AK</span><div><div class="name">Ananya Kapoor</div><div class="m" style="font-size:10.5px;">Vega Capital · Bengaluru</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cdaca3aca3b4ace3a68dbba8aaacaeacbde3a4a2">[email&#160;protected]</a></div>
+            <div><span class="chip-new progress"><span class="d"></span>In progress</span></div>
+            <div class="m">Karan T.</div>
+            <div class="m">Yesterday</div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:36px;height:4px;background:var(--line);border-radius:2px;overflow:hidden;"><div style="width:62%;height:100%;background:var(--g500);"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--g700);font-weight:800;">62</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="tm-row" style="background:rgba(45,106,45,0.04);">
+            <div><input type="checkbox" checked style="accent-color:var(--g600);"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><span class="av">NS</span><div><div class="name">Neha Shah</div><div class="m" style="font-size:10.5px;">Bright Foods · Pune</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="452b202d240527372c222d31232a2a21366b262a">[email&#160;protected]</a></div>
+            <div><span class="chip-new assigned"><span class="d"></span>Assigned</span></div>
+            <div class="m">Priya S.</div>
+            <div class="m">3d ago</div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:36px;height:4px;background:var(--line);border-radius:2px;overflow:hidden;"><div style="width:48%;height:100%;background:var(--g400);"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--g700);font-weight:800;">48</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="tm-row">
+            <div><input type="checkbox" style="accent-color:var(--g600);"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><span class="av">VP</span><div><div class="name">Vikas Patil</div><div class="m" style="font-size:10.5px;">Stride HR · Hyderabad</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ed9b84868c9ead9e999f848988c3859f">[email&#160;protected]</a></div>
+            <div><span class="chip-new new"><span class="d"></span>New</span></div>
+            <div class="m" style="color:var(--bad);font-weight:700;">Unassigned</div>
+            <div class="m">5m ago</div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:36px;height:4px;background:var(--line);border-radius:2px;overflow:hidden;"><div style="width:30%;height:100%;background:var(--g300);"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--g700);font-weight:800;">30</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="tm-row">
+            <div><input type="checkbox" style="accent-color:var(--g600);"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><span class="av">DG</span><div><div class="name">Devika Ghosh</div><div class="m" style="font-size:10.5px;">Polaris Tech · Chennai</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="274342514e4c4609406757484b46554e54095342444f">[email&#160;protected]</a></div>
+            <div><span class="chip-new lost"><span class="d"></span>Lost</span></div>
+            <div class="m">Rahul B.</div>
+            <div class="m">2 wk ago</div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:36px;height:4px;background:var(--line);border-radius:2px;overflow:hidden;"><div style="width:18%;height:100%;background:var(--g200);"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);font-weight:800;">18</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-top:18px;">
+      <div class="callout"><strong>1. Lift body to 14px.</strong> Currently 12px in cells — uncomfortable. 14px with current 40px row gives clean rhythm.</div>
+      <div class="callout"><strong>2. Demote the primary cell.</strong> Make it ink, not green. Green should signal status — not just "this is the link".</div>
+      <div class="callout"><strong>3. Score column.</strong> A 36px bar + numeric value gives the table a quick-scan ranking signal it lacks today.</div>
+    </div>
+  </div>
+  <div class="pageno">07 / 10</div>
+  <div class="pagelabel">Leads</div>
+</section>
+
+<!-- ============ 09 PRINCIPLES ============ -->
+<section data-screen-label="09 Principles">
+  <div class="pad">
+    <div class="eyebrow"><span class="dot"></span>Principles to lock in</div>
+    <h2 class="section-title">Six rules to prevent the next regression.</h2>
+    <p class="lede">If the team agrees to these as a tiny constitution, every PR can self-check against them. They take a paragraph each to explain and an hour each to enforce in <span class="mono" style="color:var(--g700);">theme.ts</span> + lint.</p>
+
+    <div class="principles">
+      <div class="pr">
+        <div class="num">P · 01</div>
+        <h3>Color earns its meaning.</h3>
+        <p>Green is reserved for: brand, primary action, and "good" status. If you use a green tint anywhere else (hover, selection, surface), make it ≤8% opacity so it reads as neutral, not as signal.</p>
+      </div>
+      <div class="pr">
+        <div class="num">P · 02</div>
+        <h3>Three weights only.</h3>
+        <p><strong>500</strong> for body, <strong>700</strong> for emphasis, <strong>800</strong> for headings. Drop 900 entirely — it's a punctuation, not a default.</p>
+      </div>
+      <div class="pr">
+        <div class="num">P · 03</div>
+        <h3>Three radii only.</h3>
+        <p><strong>4px</strong> for chips and inputs, <strong>8px</strong> for cards and buttons, <strong>9999px</strong> for avatars. Delete the others. The codebase currently uses ten different values.</p>
+      </div>
+      <div class="pr">
+        <div class="num">P · 04</div>
+        <h3>Density: one body size, 14px.</h3>
+        <p>11.5 / 12 / 12.5 / 13.5 collapses the ramp. Use 14px body, 12px caption, 11px caps eyebrow. Bigger numbers (22/32) for headings.</p>
+      </div>
+      <div class="pr">
+        <div class="num">P · 05</div>
+        <h3>Status &gt; meta &gt; trend are different shapes.</h3>
+        <p>One chip component for status (5 tones), one for meta (neutral), one for delta (trend up/down). Stop reusing <span class="mono">AppChip</span> for all three.</p>
+      </div>
+      <div class="pr">
+        <div class="num">P · 06</div>
+        <h3>Empty space is not wasted space.</h3>
+        <p>Don't fill KPI cards with circles, badges, and icons. The number is the content. The card is just a frame.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">09 / 10</div>
+  <div class="pagelabel">Principles</div>
+</section>
+
+<!-- ============ 10 ROADMAP ============ -->
+<section data-screen-label="10 Roadmap">
+  <div class="pad">
+    <div class="eyebrow"><span class="dot"></span>What to ship, in order</div>
+    <h2 class="section-title">A sensible week-by-week plan.</h2>
+    <p class="lede">Effort is rough engineering days assuming one front-end engineer. None of these touch back-end contracts; they're all visual / token-level changes inside <span class="mono" style="color:var(--g700);">theme.ts</span> and shared components.</p>
+
+    <div class="roadmap">
+      <div class="road-row">
+        <div class="road-when">Week 1</div>
+        <div class="road-what">Type ramp + radius cleanup</div>
+        <div class="road-why">Drop default fontWeight 900. Set h2/h3/h6 + body/caption sizes. Reduce radius vocabulary to 4 / 8 / 9999. Pure <span class="mono">theme.ts</span>.</div>
+        <div class="road-eff"><span>Effort</span><div class="bars"><div class="on"></div><div></div><div></div><div></div><div></div></div></div>
+      </div>
+      <div class="road-row">
+        <div class="road-when">Week 1</div>
+        <div class="road-what">Status chip split</div>
+        <div class="road-why">Split <span class="mono">AppChip</span> into <span class="mono">StatusChip</span> (5 tones) + <span class="mono">MetaChip</span> + <span class="mono">TrendChip</span>. Replace usages module-by-module.</div>
+        <div class="road-eff"><span>Effort</span><div class="bars"><div class="on"></div><div class="on"></div><div></div><div></div><div></div></div></div>
+      </div>
+      <div class="road-row">
+        <div class="road-when">Week 2</div>
+        <div class="road-what">KPI tile redesign</div>
+        <div class="road-why">Strip decoration, add sparkline / micro-bar, lift value to 30px. Touches only <span class="mono">DashboardMetricCard</span>.</div>
+        <div class="road-eff"><span>Effort</span><div class="bars"><div class="on"></div><div class="on"></div><div></div><div></div><div></div></div></div>
+      </div>
+      <div class="road-row">
+        <div class="road-when">Week 2</div>
+        <div class="road-what">Sidebar contrast + grouping</div>
+        <div class="road-why">Inactive items down to <span class="mono">g300</span>, active gets a 3px rail, two grouped sections (Pipeline / Operations), numeric badges for queues.</div>
+        <div class="road-eff"><span>Effort</span><div class="bars"><div class="on"></div><div class="on"></div><div></div><div></div><div></div></div></div>
+      </div>
+      <div class="road-row">
+        <div class="road-when">Week 3</div>
+        <div class="road-what">Leads table density &amp; score column</div>
+        <div class="road-why">Body to 14px, demote primary cell from green to ink, add 36px score bar. Touches <span class="mono">CompactDataTable</span> + <span class="mono">LeadsView</span>.</div>
+        <div class="road-eff"><span>Effort</span><div class="bars"><div class="on"></div><div class="on"></div><div class="on"></div><div></div><div></div></div></div>
+      </div>
+      <div class="road-row">
+        <div class="road-when">Week 4</div>
+        <div class="road-what">Lead detail 3-column shell</div>
+        <div class="road-why">Identity / Timeline / Next action. The biggest UX win — Lead Detail is currently the weakest module relative to its importance.</div>
+        <div class="road-eff"><span>Effort</span><div class="bars"><div class="on"></div><div class="on"></div><div class="on"></div><div class="on"></div><div></div></div></div>
+      </div>
+      <div class="road-row">
+        <div class="road-when">Ongoing</div>
+        <div class="road-what">Lint the system</div>
+        <div class="road-why">Stylelint rule: only allow <span class="mono">var(--g*)</span>, the four neutrals, and the two warning tokens. Catches new color drift in PR review.</div>
+        <div class="road-eff"><span>Effort</span><div class="bars"><div class="on"></div><div></div><div></div><div></div><div></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">10 / 10</div>
+  <div class="pagelabel">Roadmap</div>
+</section>
+
+</deck-stage>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

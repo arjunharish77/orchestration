@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Unnatify CRM — All Screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="deck-stage.js"></script>
+<style>
+  :root{
+    --g50:#eef7ee; --g100:#d8ead8; --g200:#b8d8b8; --g300:#91c091;
+    --g400:#65a265; --g500:#3f843f; --g600:#2d6a2d; --g700:#245824;
+    --g800:#1c421c; --g900:#162716;
+    --bg:#f8fcf8; --paper:#ffffff; --line:#e0ede0; --line-2:#cfe1cf;
+    --muted:#526252; --ink:#162716; --sidebar:#162716; --soft:#eef7ee;
+    --warn:#b07a16; --warn-bg:#fbf3df; --warn-border:#ecd9a4;
+    --bad:#a23a3a; --bad-bg:#fbeaea; --bad-border:#f0c4c4;
+    --info:#1c4980; --info-bg:#eef3fa; --info-border:#d6e3f0;
+  }
+  html,body{margin:0;background:#0d1a0d;color:var(--ink);font-family:'Inter',Arial,sans-serif;}
+  deck-stage{--deck-bg:#0d1a0d;}
+  section{background:var(--bg);color:var(--ink);font-family:'Inter',Arial,sans-serif;font-feature-settings:"ss01","cv11";letter-spacing:-0.005em;overflow:hidden;}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+
+  /* App chrome — used in every screen */
+  .app{display:flex;height:1080px;background:var(--bg);}
+  .side{width:220px;background:var(--sidebar);color:#91c091;padding:14px 10px;display:flex;flex-direction:column;gap:2px;flex-shrink:0;}
+  .side .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;}
+  .side .brand .lm{width:28px;height:28px;border-radius:8px;background:var(--g600);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;}
+  .side .brand .nm{color:#fff;font-weight:800;font-size:15px;letter-spacing:-0.01em;}
+  .side .group{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.18em;color:#65a265;text-transform:uppercase;padding:14px 10px 6px;}
+  .side .nav{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:6px;color:#91c091;font-size:13px;font-weight:500;position:relative;}
+  .side .nav .ic{width:14px;height:14px;border:1.6px solid currentColor;border-radius:3px;opacity:0.8;flex-shrink:0;}
+  .side .nav .ic.cir{border-radius:50%;}
+  .side .nav .ic.tri{border:none;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:11px solid #91c091;}
+  .side .nav .badge{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:#65a265;background:rgba(101,162,101,0.14);border-radius:3px;padding:1px 6px;}
+  .side .nav .badge.warn{color:#fbf3df;background:rgba(176,122,22,0.35);}
+  .side .nav.active{color:#fff;font-weight:700;background:rgba(238,247,238,0.06);}
+  .side .nav.active::before{content:"";position:absolute;left:-8px;top:6px;bottom:6px;width:3px;background:var(--g400);border-radius:2px;}
+  .side .nav.active .ic{opacity:1;}
+  .side .spacer{flex:1;}
+
+  .stage{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{height:54px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 22px;gap:14px;background:var(--paper);}
+  .search{flex:1;max-width:520px;height:34px;border-radius:9999px;background:#f8fcf8;display:flex;align-items:center;padding:0 14px;color:var(--muted);font-size:13px;}
+  .search .icn{margin-right:8px;opacity:0.6;}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .top-right .who{text-align:right;line-height:1.2;}
+  .top-right .who .n{font-size:12.5px;font-weight:700;color:var(--ink);}
+  .top-right .who .r{font-size:11px;color:var(--muted);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--g600);color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;}
+
+  .body{flex:1;padding:18px 22px;display:flex;flex-direction:column;gap:14px;overflow:hidden;}
+  .page-h{display:flex;align-items:flex-end;justify-content:space-between;}
+  .page-h h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-0.018em;color:var(--g900);}
+  .page-h .sub{font-size:13px;color:var(--muted);margin-top:3px;}
+
+  /* Components */
+  .btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:default;}
+  .btn.primary{background:var(--g600);color:#fff;}
+  .btn.outline{background:#fff;border:1px solid var(--line);color:var(--g700);}
+  .btn.ghost{background:transparent;color:var(--muted);}
+  .btn.sm{height:28px;font-size:12px;padding:0 10px;}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:4px;font-size:11px;font-weight:700;line-height:1;}
+  .chip .d{width:6px;height:6px;border-radius:50%;}
+  .chip.new{background:var(--g50);color:var(--g700);} .chip.new .d{background:var(--g500);}
+  .chip.assigned{background:var(--info-bg);color:var(--info);} .chip.assigned .d{background:var(--info);}
+  .chip.progress{background:var(--warn-bg);color:var(--warn);} .chip.progress .d{background:var(--warn);}
+  .chip.converted{background:var(--g50);color:var(--g800);} .chip.converted .d{background:var(--g700);}
+  .chip.lost{background:var(--bad-bg);color:var(--bad);} .chip.lost .d{background:var(--bad);}
+  .chip.done{background:var(--g50);color:var(--g700);} .chip.done .d{background:var(--g600);}
+  .chip.failed{background:var(--bad-bg);color:var(--bad);} .chip.failed .d{background:var(--bad);}
+  .chip.queued{background:#f4f6f4;color:var(--muted);} .chip.queued .d{background:var(--muted);}
+  .meta{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:11px;font-weight:600;background:var(--soft);color:var(--g700);}
+  .trend{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:11px;font-weight:700;background:var(--g50);color:var(--g700);}
+  .trend.down{background:var(--bad-bg);color:var(--bad);}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px;}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .panel-h{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:#fafdfa;}
+  .panel-h h3{margin:0;font-size:13px;font-weight:800;color:var(--g900);}
+  .panel-b{padding:14px;}
+
+  /* KPI */
+  .kpi{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;min-height:96px;}
+  .kpi .lbl{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;}
+  .kpi .val-row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;}
+  .kpi .val{font-size:30px;font-weight:800;color:var(--g900);line-height:1;letter-spacing:-0.018em;}
+  .kpi .val.bad{color:var(--bad);}
+  .kpi .delta{font-size:11.5px;color:var(--g600);font-weight:700;}
+  .kpi .delta.down{color:var(--bad);}
+  .kpi svg{flex-shrink:0;}
+  .spark path{fill:none;stroke:var(--g600);stroke-width:1.6;}
+  .spark .area{fill:rgba(45,106,45,0.10);stroke:none;}
+
+  /* Tables */
+  .table{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
+  .thead, .trow{display:grid;gap:10px;align-items:center;padding:10px 14px;}
+  .thead{background:#fafdfa;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);font-weight:700;}
+  .trow{border-bottom:1px solid var(--line);font-size:13px;}
+  .trow:last-child{border-bottom:none;}
+  .trow:hover{background:#fafdfa;}
+  .trow.sel{background:rgba(45,106,45,0.05);}
+  .trow .av{width:26px;height:26px;border-radius:50%;background:var(--soft);color:var(--g700);font-weight:800;font-size:10.5px;display:grid;place-items:center;flex-shrink:0;}
+  .trow .name{font-weight:700;color:var(--ink);}
+  .trow .m{color:var(--muted);}
+  .trow .sub{font-size:10.5px;color:var(--muted);}
+  .check{width:14px;height:14px;border:1.6px solid var(--g500);border-radius:3px;flex-shrink:0;}
+  .check.on{background:var(--g600);border-color:var(--g600);position:relative;}
+  .check.on::after{content:"";position:absolute;top:1.5px;left:4.5px;width:3px;height:7px;border:solid #fff;border-width:0 1.6px 1.6px 0;transform:rotate(45deg);}
+
+  .score{display:flex;align-items:center;gap:7px;}
+  .score .bar{width:36px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;}
+  .score .bar div{height:100%;}
+  .score .v{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;color:var(--g700);}
+
+  /* Filters */
+  .filters{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--line);border-radius:8px;flex-wrap:wrap;}
+  .filters .input{height:30px;border:1px solid var(--line);border-radius:6px;padding:0 10px;display:inline-flex;align-items:center;font-size:12px;color:var(--ink);background:#fff;}
+  .filters .input.ghost{color:var(--muted);}
+  .filters .sep{width:1px;height:18px;background:var(--line);}
+
+  /* Tabs */
+  .tabs{display:inline-flex;gap:2px;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:3px;}
+  .tabs .t{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;color:var(--g900);}
+  .tabs .t.on{background:var(--g600);color:#fff;font-weight:700;}
+
+  /* Lead detail tl */
+  .tl-row{display:grid;grid-template-columns:60px 1fr;gap:14px;padding:10px 0;border-top:1px dashed var(--line);}
+  .tl-row:first-child{border-top:none;padding-top:4px;}
+  .tl-time{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:0.04em;}
+  .tl-title{font-size:13px;font-weight:700;color:var(--ink);}
+  .tl-detail{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5;}
+  .tl-icon{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--soft);border:1px solid var(--line);margin-right:6px;vertical-align:-3px;font-size:9px;color:var(--g700);}
+
+  .pageno{position:absolute;left:22px;bottom:14px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;}
+  .pagelabel{position:absolute;right:22px;bottom:14px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;}
+
+  /* progress bar */
+  .pbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;}
+  .pbar div{height:100%;background:var(--g600);}
+  .pbar div.warn{background:var(--warn);}
+  .pbar div.bad{background:var(--bad);}
+
+  /* cover */
+  .cover{padding:84px;display:flex;flex-direction:column;justify-content:flex-end;height:100%;box-sizing:border-box;background:radial-gradient(1200px 700px at 88% 10%, rgba(45,106,45,0.08), transparent 70%),var(--bg);}
+  .cover h1{font-size:108px;line-height:0.94;font-weight:800;letter-spacing:-0.035em;margin:18px 0 0;color:var(--g900);}
+  .cover .lede{font-size:22px;color:var(--muted);max-width:1100px;margin:18px 0 0;line-height:1.45;}
+  .cover .eyebrow{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--g600);}
+  .cover .eyebrow .dot{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--g600);margin-right:10px;vertical-align:1px;}
+  .cover .toc{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:60px;border-top:1px solid var(--line);}
+  .cover .toc div{padding:14px 0;border-bottom:1px solid var(--line);font-size:13px;display:flex;justify-content:space-between;}
+  .cover .toc div .k{color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;font-size:11px;text-transform:uppercase;width:40px;}
+  .cover .toc div .v{color:var(--g900);font-weight:700;}
+
+  /* settings sub-nav */
+  .subnav{display:flex;flex-direction:column;gap:1px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px;width:200px;flex-shrink:0;}
+  .subnav .it{padding:8px 10px;border-radius:6px;font-size:13px;color:var(--ink);font-weight:500;}
+  .subnav .it.on{background:var(--soft);color:var(--g800);font-weight:700;}
+
+  /* automation canvas */
+  .canvas{background:#fff;border:1px solid var(--line);border-radius:8px;background-image:radial-gradient(circle, var(--line) 1px, transparent 1px);background-size:18px 18px;background-position:0 0;flex:1;position:relative;overflow:hidden;}
+  .node{position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:180px;font-size:12px;box-shadow:0 8px 22px rgba(22,39,22,0.06);}
+  .node .ntag{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--g600);letter-spacing:0.12em;text-transform:uppercase;}
+  .node .ntitle{font-weight:700;color:var(--ink);margin-top:2px;}
+  .node .nsub{font-size:11px;color:var(--muted);margin-top:3px;}
+  .node.trigger{border-color:var(--g500);}
+  .node.trigger .ntag{color:var(--g700);}
+  .node.action{border-color:var(--info-border);}
+  .node.action .ntag{color:var(--info);}
+  .edge{position:absolute;height:2px;background:var(--g300);}
+  .edge::after{content:"";position:absolute;right:-1px;top:-3px;width:0;height:0;border-left:6px solid var(--g300);border-top:4px solid transparent;border-bottom:4px solid transparent;}
+</style>
+</head>
+<body>
+<script type="application/json" id="speaker-notes">[]</script>
+
+<deck-stage>
+
+<!-- 01 COVER -->
+<section data-screen-label="01 Cover">
+  <div class="cover">
+    <div style="width:64px;height:64px;border-radius:10px;background:var(--g600);display:grid;place-items:center;color:#fff;font-weight:800;font-size:30px;box-shadow:0 12px 28px rgba(22,39,22,0.18);">U</div>
+    <div class="eyebrow" style="margin-top:38px;"><span class="dot"></span>All screens · refactor target</div>
+    <h1>Every screen,<br>in your green.</h1>
+    <p class="lede">Reference mocks for all 11 modules of the Unnatify CRM after applying the type ramp, status chips, KPI redesign, sidebar contrast, and density changes from the critique deck. Use these as the visual source of truth for the Claude Code handoff.</p>
+    <div class="toc">
+      <div><span class="k">02</span><span class="v">Dashboard</span></div>
+      <div><span class="k">03</span><span class="v">Leads · list</span></div>
+      <div><span class="k">04</span><span class="v">Lead detail</span></div>
+      <div><span class="k">05</span><span class="v">Activities</span></div>
+      <div><span class="k">06</span><span class="v">Tasks</span></div>
+      <div><span class="k">07</span><span class="v">Uploads (CSV)</span></div>
+      <div><span class="k">08</span><span class="v">Automation</span></div>
+      <div><span class="k">09</span><span class="v">Reports</span></div>
+      <div><span class="k">10</span><span class="v">Connectors</span></div>
+      <div><span class="k">11</span><span class="v">Users &amp; teams</span></div>
+      <div><span class="k">12</span><span class="v">Settings</span></div>
+      <div><span class="k">13</span><span class="v">Login</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 02 DASHBOARD -->
+<section data-screen-label="02 Dashboard">
+  <div class="app">
+    <!-- sidebar -->
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav active"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads<span class="badge">128</span></div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="ic"></div>Settings</div>
+    </div>
+
+    <div class="stage">
+      <div class="topbar">
+        <div class="search"><span class="icn">⌕</span>Search leads, tasks, activities…<span class="mono" style="margin-left:auto;font-size:10px;color:var(--muted);">⌘K</span></div>
+        <div class="top-right">
+          <div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div>
+          <div class="avatar">PS</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="page-h">
+          <div>
+            <h1>Dashboard</h1>
+            <div class="sub">Pipeline, activity, and connector health · updated 2m ago</div>
+          </div>
+          <div style="display:flex;gap:8px;"><span class="meta">Last 30 days</span><span class="btn outline sm">Export</span><span class="btn primary sm">+ Add lead</span></div>
+        </div>
+
+        <!-- KPI grid -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+          <div class="kpi">
+            <div class="lbl">Uploaded leads</div>
+            <div class="val-row"><div class="val">12,480</div>
+              <svg class="spark" width="80" height="28" viewBox="0 0 100 32" preserveAspectRatio="none"><path class="area" d="M0 26 L10 22 L20 24 L30 18 L40 20 L50 14 L60 16 L70 10 L80 12 L90 6 L100 8 L100 32 L0 32 Z"/><path d="M0 26 L10 22 L20 24 L30 18 L40 20 L50 14 L60 16 L70 10 L80 12 L90 6 L100 8"/></svg>
+            </div>
+            <div class="delta">+8.2% vs prev 30d</div>
+          </div>
+          <div class="kpi">
+            <div class="lbl">Assigned leads</div>
+            <div class="val-row"><div class="val">8,142</div>
+              <svg class="spark" width="80" height="28" viewBox="0 0 100 32" preserveAspectRatio="none"><path class="area" d="M0 22 L10 20 L20 18 L30 16 L40 14 L50 16 L60 12 L70 10 L80 8 L90 10 L100 6 L100 32 L0 32 Z"/><path d="M0 22 L10 20 L20 18 L30 16 L40 14 L50 16 L60 12 L70 10 L80 8 L90 10 L100 6"/></svg>
+            </div>
+            <div class="delta">+12% week over week</div>
+          </div>
+          <div class="kpi">
+            <div class="lbl">Open tasks · 7 overdue</div>
+            <div class="val-row"><div class="val bad">42</div>
+              <div style="display:flex;gap:2px;align-items:flex-end;">
+                <div style="width:6px;height:8px;background:var(--g300);border-radius:1px;"></div>
+                <div style="width:6px;height:14px;background:var(--g500);border-radius:1px;"></div>
+                <div style="width:6px;height:10px;background:var(--g500);border-radius:1px;"></div>
+                <div style="width:6px;height:18px;background:var(--g600);border-radius:1px;"></div>
+                <div style="width:6px;height:24px;background:var(--bad);border-radius:1px;"></div>
+                <div style="width:6px;height:28px;background:var(--bad);border-radius:1px;"></div>
+              </div>
+            </div>
+            <div class="delta down">7 missed today</div>
+          </div>
+          <div class="kpi">
+            <div class="lbl">Converted</div>
+            <div class="val-row"><div class="val">386</div>
+              <svg class="spark" width="80" height="28" viewBox="0 0 100 32" preserveAspectRatio="none"><path class="area" d="M0 18 L10 20 L20 16 L30 12 L40 14 L50 8 L60 10 L70 6 L80 4 L90 6 L100 2 L100 32 L0 32 Z"/><path d="M0 18 L10 20 L20 16 L30 12 L40 14 L50 8 L60 10 L70 6 L80 4 L90 6 L100 2"/></svg>
+            </div>
+            <div class="delta">+5.4% conversion · 30d</div>
+          </div>
+          <div class="kpi">
+            <div class="lbl">Automation runs</div>
+            <div class="val-row"><div class="val">128</div>
+              <div class="mono" style="font-size:10px;color:var(--muted);text-align:right;line-height:1.5;">
+                <div><span style="color:var(--g700);font-weight:800;">122</span> ok</div>
+                <div><span style="color:var(--bad);font-weight:800;">2</span> failed · <span style="color:var(--warn);font-weight:800;">4</span> pending</div>
+              </div>
+            </div>
+            <div class="delta">Last run 8m ago</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 360px;gap:12px;flex:1;min-height:0;">
+          <!-- recent leads -->
+          <div class="panel" style="display:flex;flex-direction:column;">
+            <div class="panel-h"><h3>Recent leads</h3><div style="display:flex;gap:6px;"><span class="meta">Today</span><span class="btn ghost sm">View all →</span></div></div>
+            <div class="table" style="border:none;border-radius:0;flex:1;">
+              <div class="thead" style="grid-template-columns:1.6fr 1.2fr 0.8fr 0.8fr 0.8fr 0.6fr;">
+                <div>Lead</div><div>Email</div><div>Status</div><div>Owner</div><div>Last activity</div><div>Score</div>
+              </div>
+              <div class="trow" style="grid-template-columns:1.6fr 1.2fr 0.8fr 0.8fr 0.8fr 0.6fr;">
+                <div style="display:flex;gap:10px;align-items:center;"><div class="av">RM</div><div><div class="name">Rohit Mehra</div><div class="sub">Acme Logistics</div></div></div>
+                <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d9abb6b1b0ad99b8bab4bcb5b6bef7b0b7">[email&#160;protected]</a></div>
+                <div><span class="chip converted"><span class="d"></span>Converted</span></div>
+                <div class="m">Priya S.</div>
+                <div class="m">2h ago</div>
+                <div class="score"><div class="bar"><div style="width:88%;background:var(--g600);"></div></div><span class="v">88</span></div>
+              </div>
+              <div class="trow" style="grid-template-columns:1.6fr 1.2fr 0.8fr 0.8fr 0.8fr 0.6fr;">
+                <div style="display:flex;gap:10px;align-items:center;"><div class="av">AK</div><div><div class="name">Ananya Kapoor</div><div class="sub">Vega Capital</div></div></div>
+                <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="294847484750480742695f4c4e484a4859074046">[email&#160;protected]</a></div>
+                <div><span class="chip progress"><span class="d"></span>In progress</span></div>
+                <div class="m">Karan T.</div>
+                <div class="m">Yesterday</div>
+                <div class="score"><div class="bar"><div style="width:62%;background:var(--g500);"></div></div><span class="v">62</span></div>
+              </div>
+              <div class="trow" style="grid-template-columns:1.6fr 1.2fr 0.8fr 0.8fr 0.8fr 0.6fr;">
+                <div style="display:flex;gap:10px;align-items:center;"><div class="av">NS</div><div><div class="name">Neha Shah</div><div class="sub">Bright Foods</div></div></div>
+                <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f09e959891b0928299979884969f9f9483de939f">[email&#160;protected]</a></div>
+                <div><span class="chip assigned"><span class="d"></span>Assigned</span></div>
+                <div class="m">Priya S.</div>
+                <div class="m">3d ago</div>
+                <div class="score"><div class="bar"><div style="width:48%;background:var(--g400);"></div></div><span class="v">48</span></div>
+              </div>
+              <div class="trow" style="grid-template-columns:1.6fr 1.2fr 0.8fr 0.8fr 0.8fr 0.6fr;">
+                <div style="display:flex;gap:10px;align-items:center;"><div class="av">VP</div><div><div class="name">Vikas Patil</div><div class="sub">Stride HR</div></div></div>
+                <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f187989a9082b1828583989594df9983">[email&#160;protected]</a></div>
+                <div><span class="chip new"><span class="d"></span>New</span></div>
+                <div style="color:var(--bad);font-weight:700;">Unassigned</div>
+                <div class="m">5m ago</div>
+                <div class="score"><div class="bar"><div style="width:30%;background:var(--g300);"></div></div><span class="v">30</span></div>
+              </div>
+              <div class="trow" style="grid-template-columns:1.6fr 1.2fr 0.8fr 0.8fr 0.8fr 0.6fr;">
+                <div style="display:flex;gap:10px;align-items:center;"><div class="av">DG</div><div><div class="name">Devika Ghosh</div><div class="sub">Polaris Tech</div></div></div>
+                <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="224647544b49430c4562524d4e43504b510c5647414a">[email&#160;protected]</a></div>
+                <div><span class="chip lost"><span class="d"></span>Lost</span></div>
+                <div class="m">Rahul B.</div>
+                <div class="m">2 wk ago</div>
+                <div class="score"><div class="bar"><div style="width:18%;background:var(--g200);"></div></div><span class="v" style="color:var(--muted);">18</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- right rail -->
+          <div style="display:flex;flex-direction:column;gap:12px;min-height:0;">
+            <div class="panel">
+              <div class="panel-h"><h3>Priority tasks · 7 due</h3><span class="btn ghost sm">View all</span></div>
+              <div style="padding:8px 12px;display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;gap:10px;align-items:flex-start;"><div class="check"></div><div><div style="font-size:13px;font-weight:700;">Call back Rohit Mehra</div><div style="font-size:11.5px;color:var(--bad);font-weight:700;">Today, 14:30</div></div></div>
+                <div style="display:flex;gap:10px;align-items:flex-start;"><div class="check"></div><div><div style="font-size:13px;font-weight:700;">Send proposal — Vega</div><div style="font-size:11.5px;color:var(--muted);">Tomorrow</div></div></div>
+                <div style="display:flex;gap:10px;align-items:flex-start;"><div class="check"></div><div><div style="font-size:13px;font-weight:700;">Confirm onboarding slot</div><div style="font-size:11.5px;color:var(--bad);font-weight:700;">2d overdue</div></div></div>
+                <div style="display:flex;gap:10px;align-items:flex-start;"><div class="check"></div><div><div style="font-size:13px;font-weight:700;">Assign 14 new inbound leads</div><div style="font-size:11.5px;color:var(--muted);">Wed</div></div></div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-h"><h3>Connector health</h3><span class="meta">All up</span></div>
+              <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;"><span>Telephony · Exotel</span><span class="chip done"><span class="d"></span>Live</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;"><span>WhatsApp Business</span><span class="chip done"><span class="d"></span>Live</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;"><span>Voicebot · Yellow.ai</span><span class="chip progress"><span class="d"></span>Degraded</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;"><span>API · LMS sync</span><span class="chip done"><span class="d"></span>Live</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">02 / 13</div><div class="pagelabel">Dashboard</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 03 LEADS LIST -->
+<section data-screen-label="03 Leads list">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav active"><div class="ic cir"></div>Leads<span class="badge">2,840</span></div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="ic"></div>Settings</div>
+    </div>
+
+    <div class="stage">
+      <div class="topbar">
+        <div class="search"><span class="icn">⌕</span>Search leads, tasks, activities…</div>
+        <div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div>
+      </div>
+      <div class="body">
+        <div class="page-h">
+          <div>
+            <h1>Leads</h1>
+            <div class="sub">2,840 results · sorted by Last activity · saved view: <strong style="color:var(--g700);">My pipeline</strong></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <span class="btn outline sm">Saved views ▾</span>
+            <span class="btn outline sm">Columns</span>
+            <span class="btn outline sm">Export CSV</span>
+            <span class="btn primary sm">+ Add lead</span>
+          </div>
+        </div>
+
+        <div class="filters">
+          <span class="input">Status: All ▾</span>
+          <span class="input">Owner: Anyone ▾</span>
+          <span class="input">Source: All ▾</span>
+          <span class="input">Created: Last 30d ▾</span>
+          <span class="input ghost">+ Add filter</span>
+          <div class="sep"></div>
+          <span class="input ghost">Advanced filter ▸</span>
+          <span style="margin-left:auto;font-size:12px;color:var(--muted);">Showing 1–25 of 2,840</span>
+        </div>
+
+        <!-- bulk action bar (visible because 2 are selected) -->
+        <div style="background:rgba(45,106,45,0.06);border:1px solid var(--line);border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:10px;font-size:12.5px;">
+          <strong style="color:var(--g700);">2 selected</strong>
+          <div class="sep"></div>
+          <span class="btn outline sm">Change owner</span>
+          <span class="btn outline sm">Set status</span>
+          <span class="btn outline sm">Add to list</span>
+          <span class="btn ghost sm">Clear</span>
+        </div>
+
+        <div class="table" style="flex:1;">
+          <div class="thead" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div></div><div>Lead</div><div>Email · Mobile</div><div>Status</div><div>Owner</div><div>Source</div><div>Last activity</div><div>Score</div><div></div>
+          </div>
+          <!-- 9 rows -->
+          <div class="trow" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div class="check"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">RM</div><div><div class="name">Rohit Mehra</div><div class="sub">Acme Logistics · Mumbai</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c5b7aaadacb185a4a6a8a0a9aaa2ebacab">[email&#160;protected]</a><br>+91 98xxx 31204</div>
+            <div><span class="chip converted"><span class="d"></span>Converted</span></div>
+            <div class="m">Priya S.</div>
+            <div class="m">Inbound</div>
+            <div class="m">2h ago</div>
+            <div class="score"><div class="bar"><div style="width:88%;background:var(--g600);"></div></div><span class="v">88</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow sel" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div class="check on"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">AK</div><div><div class="name">Ananya Kapoor</div><div class="sub">Vega Capital · Bengaluru</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="98f9f6f9f6e1f9b6f3d8eefdfff9fbf9e8b6f1f7">[email&#160;protected]</a><br>+91 99xxx 88210</div>
+            <div><span class="chip progress"><span class="d"></span>In progress</span></div>
+            <div class="m">Karan T.</div>
+            <div class="m">Webform</div>
+            <div class="m">Yesterday</div>
+            <div class="score"><div class="bar"><div style="width:62%;background:var(--g500);"></div></div><span class="v">62</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow sel" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div class="check on"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">NS</div><div><div class="name">Neha Shah</div><div class="sub">Bright Foods · Pune</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="dfb1bab7be9fbdadb6b8b7abb9b0b0bbacf1bcb0">[email&#160;protected]</a><br>+91 97xxx 22090</div>
+            <div><span class="chip assigned"><span class="d"></span>Assigned</span></div>
+            <div class="m">Priya S.</div>
+            <div class="m">CSV upload</div>
+            <div class="m">3d ago</div>
+            <div class="score"><div class="bar"><div style="width:48%;background:var(--g400);"></div></div><span class="v">48</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div class="check"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">VP</div><div><div class="name">Vikas Patil</div><div class="sub">Stride HR · Hyderabad</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="dbadb2b0baa89ba8afa9b2bfbef5b3a9">[email&#160;protected]</a><br>+91 90xxx 17834</div>
+            <div><span class="chip new"><span class="d"></span>New</span></div>
+            <div style="color:var(--bad);font-weight:700;">Unassigned</div>
+            <div class="m">Webform</div>
+            <div class="m">5m ago</div>
+            <div class="score"><div class="bar"><div style="width:30%;background:var(--g300);"></div></div><span class="v">30</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div class="check"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">DG</div><div><div class="name">Devika Ghosh</div><div class="sub">Polaris Tech · Chennai</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="01656477686a602f6641716e6d607368722f75646269">[email&#160;protected]</a><br>+91 80xxx 44012</div>
+            <div><span class="chip lost"><span class="d"></span>Lost</span></div>
+            <div class="m">Rahul B.</div>
+            <div class="m">Outbound</div>
+            <div class="m">2 wk ago</div>
+            <div class="score"><div class="bar"><div style="width:18%;background:var(--g200);"></div></div><span class="v" style="color:var(--muted);">18</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div class="check"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">SK</div><div><div class="name">Sahil Khanna</div><div class="sub">Lumen Realty · Delhi</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="483b2920212408243d252d26662d3b3c293c2d">[email&#160;protected]</a><br>+91 98xxx 12390</div>
+            <div><span class="chip progress"><span class="d"></span>In progress</span></div>
+            <div class="m">Karan T.</div>
+            <div class="m">Inbound</div>
+            <div class="m">6h ago</div>
+            <div class="score"><div class="bar"><div style="width:71%;background:var(--g500);"></div></div><span class="v">71</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div class="check"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">MR</div><div><div class="name">Meera Raghavan</div><div class="sub">Tide Bio · Bengaluru</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="127f7777607352667b7677707b7d3c717d7f">[email&#160;protected]</a><br>+91 99xxx 31100</div>
+            <div><span class="chip new"><span class="d"></span>New</span></div>
+            <div class="m">Priya S.</div>
+            <div class="m">Webform</div>
+            <div class="m">22m ago</div>
+            <div class="score"><div class="bar"><div style="width:54%;background:var(--g500);"></div></div><span class="v">54</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:32px 1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 0.6fr 60px;">
+            <div class="check"></div>
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">JT</div><div><div class="name">Jayant Tewari</div><div class="sub">North Stack · Gurgaon</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e882899189869ca886879a9c809b9c898b83c68187">[email&#160;protected]</a><br>+91 97xxx 90880</div>
+            <div><span class="chip converted"><span class="d"></span>Converted</span></div>
+            <div class="m">Rahul B.</div>
+            <div class="m">Outbound</div>
+            <div class="m">5d ago</div>
+            <div class="score"><div class="bar"><div style="width:81%;background:var(--g600);"></div></div><span class="v">81</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--line);background:#fafdfa;">
+            <div style="font-size:12px;color:var(--muted);">Showing 1–25 of 2,840</div>
+            <div style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);"><span class="btn ghost sm">Prev</span><span>Page 1 / 114</span><span class="btn outline sm">Next</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">03 / 13</div><div class="pagelabel">Leads · list</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 04 LEAD DETAIL -->
+<section data-screen-label="04 Lead detail">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav active"><div class="ic cir"></div>Leads</div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="ic"></div>Settings</div>
+    </div>
+    <div class="stage">
+      <div class="topbar">
+        <div class="search"><span class="icn">⌕</span>Search…</div>
+        <div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div>
+      </div>
+      <div class="body">
+        <div style="font-size:12px;color:var(--muted);"><span style="color:var(--g700);">Leads</span> / Rohit Mehra</div>
+        <div class="page-h">
+          <div>
+            <h1>Rohit Mehra</h1>
+            <div class="sub">Head of Procurement · Acme Logistics · Mumbai</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <span class="btn outline sm">☎ Click-to-call</span>
+            <span class="btn outline sm">✉ Email</span>
+            <span class="btn outline sm">+ Task</span>
+            <span class="btn primary sm">Edit lead</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:300px 1fr 320px;gap:12px;flex:1;min-height:0;">
+          <!-- LEFT identity -->
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="card">
+              <div style="display:flex;gap:12px;align-items:center;">
+                <div style="width:48px;height:48px;border-radius:50%;background:var(--g50);color:var(--g700);font-weight:800;font-size:18px;display:grid;place-items:center;">RM</div>
+                <div><div style="font-size:16px;font-weight:800;">Rohit Mehra</div><div style="font-size:12px;color:var(--muted);">Procurement</div></div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <span class="chip converted"><span class="d"></span>Converted</span>
+                <span class="meta">Mumbai</span>
+                <span class="meta">Enterprise</span>
+              </div>
+            </div>
+            <div class="card">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Contact</div>
+              <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:6px 12px;font-size:12.5px;">
+                <div style="color:var(--muted);">Email</div><div style="font-weight:600;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="087a6760617c48696b656d64676f266166">[email&#160;protected]</a></div>
+                <div style="color:var(--muted);">Mobile</div><div style="font-weight:600;">+91 98xxx 31204</div>
+                <div style="color:var(--muted);">Owner</div><div style="font-weight:600;">Priya Sharma</div>
+                <div style="color:var(--muted);">Source</div><div style="font-weight:600;">Inbound · Webform</div>
+                <div style="color:var(--muted);">Created</div><div style="font-weight:600;">12 Apr 2026</div>
+                <div style="color:var(--muted);">Branch</div><div style="font-weight:600;">MUM-04</div>
+                <div style="color:var(--muted);">Team</div><div style="font-weight:600;">West · Enterprise</div>
+                <div style="color:var(--muted);">Language</div><div style="font-weight:600;">English, Hindi</div>
+              </div>
+            </div>
+            <div class="card">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Score</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:2px;">
+                <div style="font-size:36px;font-weight:800;color:var(--g700);line-height:1;letter-spacing:-0.02em;">88</div>
+                <div style="flex:1;">
+                  <div class="pbar"><div style="width:88%;"></div></div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:6px;">Top 12% of pipeline by engagement &amp; intent.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MIDDLE timeline -->
+          <div class="panel" style="display:flex;flex-direction:column;min-height:0;">
+            <div class="panel-h">
+              <h3>Timeline</h3>
+              <div class="tabs"><div class="t on">All</div><div class="t">Calls</div><div class="t">Emails</div><div class="t">Tasks</div><div class="t">Notes</div></div>
+            </div>
+            <div style="padding:12px 16px;overflow:auto;flex:1;">
+              <div class="tl-row"><div class="tl-time">2h ago</div><div><div class="tl-title"><span class="tl-icon">✓</span>Contract signed — Premium 12-mo</div><div class="tl-detail">Closed by Priya Sharma · ₹14.2L ARR · Renewal Apr 2027</div></div></div>
+              <div class="tl-row"><div class="tl-time">Yest 18:40</div><div><div class="tl-title"><span class="tl-icon">✉</span>Email · Final pricing &amp; SOW sent</div><div class="tl-detail">Reply: "Looks great, share for sign-off." · 2h response</div></div></div>
+              <div class="tl-row"><div class="tl-time">Yest 11:10</div><div><div class="tl-title"><span class="tl-icon">☎</span>Outbound call · 14m</div><div class="tl-detail">Discussed multi-warehouse rollout. Disposition: <em>Decision-maker engaged</em>.</div></div></div>
+              <div class="tl-row"><div class="tl-time">3d ago</div><div><div class="tl-title"><span class="tl-icon">✎</span>Note · Procurement gating</div><div class="tl-detail">Needs CFO sign-off on multi-year discount. Flagged to legal.</div></div></div>
+              <div class="tl-row"><div class="tl-time">5d ago</div><div><div class="tl-title"><span class="tl-icon">↑</span>CSV uploaded · 6 leads matched to Acme</div><div class="tl-detail">Batch <span class="mono">acme-2026-04.csv</span> · matched on company domain.</div></div></div>
+              <div class="tl-row"><div class="tl-time">12 Apr</div><div><div class="tl-title"><span class="tl-icon">★</span>Automation: routed via team-Mumbai</div><div class="tl-detail">Round-robin selected Priya (load: 18 active leads).</div></div></div>
+              <div class="tl-row"><div class="tl-time">12 Apr</div><div><div class="tl-title"><span class="tl-icon">●</span>Lead created · Webform</div><div class="tl-detail">Source: contact form on /enterprise. UTM: q2-warehouses.</div></div></div>
+            </div>
+          </div>
+
+          <!-- RIGHT next action + tasks + stats -->
+          <div style="display:flex;flex-direction:column;gap:12px;min-height:0;">
+            <div class="card" style="border-left:3px solid var(--g600);">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Next best action</div>
+              <div style="font-size:15px;font-weight:800;color:var(--g900);">Schedule onboarding kickoff</div>
+              <div style="font-size:12px;color:var(--muted);">SLA: within 48h of contract signing. Suggested slot: <strong>Tue 10:00 IST</strong>.</div>
+              <div style="display:flex;gap:6px;margin-top:6px;"><span class="btn primary sm">Book call</span><span class="btn outline sm">Defer</span></div>
+            </div>
+            <div class="card">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Open tasks · 3</div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;"><div class="check" style="margin-top:2px;"></div><div><div style="font-weight:700;">Send onboarding deck</div><div style="color:var(--muted);">Today · 17:00</div></div></div>
+                <div style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;"><div class="check" style="margin-top:2px;"></div><div><div style="font-weight:700;">Confirm billing PO</div><div style="color:var(--bad);font-weight:700;">Overdue · 1d</div></div></div>
+                <div style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;"><div class="check" style="margin-top:2px;"></div><div><div style="font-weight:700;">Loop in CSM</div><div style="color:var(--muted);">Wed</div></div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Activity · 30 days</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;">
+                <div><div style="font-size:22px;font-weight:800;color:var(--g700);line-height:1;">14</div><div style="color:var(--muted);margin-top:4px;">Calls</div></div>
+                <div><div style="font-size:22px;font-weight:800;color:var(--g700);line-height:1;">22</div><div style="color:var(--muted);margin-top:4px;">Emails</div></div>
+                <div><div style="font-size:22px;font-weight:800;color:var(--g700);line-height:1;">6</div><div style="color:var(--muted);margin-top:4px;">Meetings</div></div>
+                <div><div style="font-size:22px;font-weight:800;color:var(--g700);line-height:1;">2.8d</div><div style="color:var(--muted);margin-top:4px;">Avg response</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">04 / 13</div><div class="pagelabel">Lead detail</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 05 ACTIVITIES -->
+<section data-screen-label="05 Activities">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads</div>
+      <div class="nav active"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="ic"></div>Settings</div>
+    </div>
+    <div class="stage">
+      <div class="topbar"><div class="search"><span class="icn">⌕</span>Search…</div><div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div></div>
+      <div class="body">
+        <div class="page-h">
+          <div><h1>Activities</h1><div class="sub">Calls, emails, notes, meetings &amp; system events · 412 today</div></div>
+          <div style="display:flex;gap:8px;"><span class="btn outline sm">Export</span><span class="btn primary sm">+ Log activity</span></div>
+        </div>
+        <div class="filters">
+          <span class="input">Type: All ▾</span>
+          <span class="input">Owner: Priya S. ▾</span>
+          <span class="input">Lead: Any ▾</span>
+          <span class="input">Date: Today ▾</span>
+          <span class="input ghost">+ Add filter</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div class="kpi"><div class="lbl">Calls today</div><div class="val-row"><div class="val">158</div><div class="trend">+11%</div></div><div class="delta">88 connected · 70 missed</div></div>
+          <div class="kpi"><div class="lbl">Emails sent</div><div class="val-row"><div class="val">204</div><div class="trend">+4%</div></div><div class="delta">Avg response 3.2h</div></div>
+          <div class="kpi"><div class="lbl">Meetings booked</div><div class="val-row"><div class="val">18</div><div class="trend">+2</div></div><div class="delta">3 same-day</div></div>
+          <div class="kpi"><div class="lbl">Notes added</div><div class="val-row"><div class="val">32</div><div class="trend">+6</div></div><div class="delta">12 flagged</div></div>
+        </div>
+        <div class="table" style="flex:1;">
+          <div class="thead" style="grid-template-columns:120px 110px 1.4fr 1.2fr 0.8fr 100px 60px;">
+            <div>When</div><div>Type</div><div>Lead</div><div>Summary</div><div>Owner</div><div>Outcome</div><div></div>
+          </div>
+          <div class="trow" style="grid-template-columns:120px 110px 1.4fr 1.2fr 0.8fr 100px 60px;">
+            <div class="m">14:32 today</div><div><span class="meta">☎ Call</span></div>
+            <div style="display:flex;gap:8px;align-items:center;"><div class="av" style="width:22px;height:22px;font-size:9.5px;">RM</div><div class="name">Rohit Mehra</div></div>
+            <div class="m">14m connected · contract sign-off</div><div class="m">Priya S.</div><div><span class="chip done"><span class="d"></span>Connected</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:120px 110px 1.4fr 1.2fr 0.8fr 100px 60px;">
+            <div class="m">13:55</div><div><span class="meta">✉ Email</span></div>
+            <div style="display:flex;gap:8px;align-items:center;"><div class="av" style="width:22px;height:22px;font-size:9.5px;">AK</div><div class="name">Ananya Kapoor</div></div>
+            <div class="m">Sent: pricing breakdown v3</div><div class="m">Karan T.</div><div><span class="chip done"><span class="d"></span>Sent</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:120px 110px 1.4fr 1.2fr 0.8fr 100px 60px;">
+            <div class="m">13:40</div><div><span class="meta">☎ Call</span></div>
+            <div style="display:flex;gap:8px;align-items:center;"><div class="av" style="width:22px;height:22px;font-size:9.5px;">VP</div><div class="name">Vikas Patil</div></div>
+            <div class="m">No answer · voicemail left</div><div class="m">Karan T.</div><div><span class="chip failed"><span class="d"></span>No answer</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:120px 110px 1.4fr 1.2fr 0.8fr 100px 60px;">
+            <div class="m">12:18</div><div><span class="meta">⌖ Meeting</span></div>
+            <div style="display:flex;gap:8px;align-items:center;"><div class="av" style="width:22px;height:22px;font-size:9.5px;">NS</div><div class="name">Neha Shah</div></div>
+            <div class="m">Demo · 45m · 4 attendees</div><div class="m">Priya S.</div><div><span class="chip done"><span class="d"></span>Held</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:120px 110px 1.4fr 1.2fr 0.8fr 100px 60px;">
+            <div class="m">11:30</div><div><span class="meta">✎ Note</span></div>
+            <div style="display:flex;gap:8px;align-items:center;"><div class="av" style="width:22px;height:22px;font-size:9.5px;">SK</div><div class="name">Sahil Khanna</div></div>
+            <div class="m">Procurement gating — needs CFO</div><div class="m">Karan T.</div><div><span class="chip queued"><span class="d"></span>Internal</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:120px 110px 1.4fr 1.2fr 0.8fr 100px 60px;">
+            <div class="m">10:08</div><div><span class="meta">★ System</span></div>
+            <div style="display:flex;gap:8px;align-items:center;"><div class="av" style="width:22px;height:22px;font-size:9.5px;">JT</div><div class="name">Jayant Tewari</div></div>
+            <div class="m">Auto-assigned via team-Delhi</div><div class="m">Automation</div><div><span class="chip done"><span class="d"></span>OK</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:120px 110px 1.4fr 1.2fr 0.8fr 100px 60px;">
+            <div class="m">09:50</div><div><span class="meta">☎ Call</span></div>
+            <div style="display:flex;gap:8px;align-items:center;"><div class="av" style="width:22px;height:22px;font-size:9.5px;">MR</div><div class="name">Meera Raghavan</div></div>
+            <div class="m">22m connected · followup booked Wed</div><div class="m">Priya S.</div><div><span class="chip done"><span class="d"></span>Connected</span></div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">05 / 13</div><div class="pagelabel">Activities</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 06 TASKS -->
+<section data-screen-label="06 Tasks">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads</div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav active"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="ic"></div>Settings</div>
+    </div>
+    <div class="stage">
+      <div class="topbar"><div class="search"><span class="icn">⌕</span>Search…</div><div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div></div>
+      <div class="body">
+        <div class="page-h">
+          <div><h1>Tasks</h1><div class="sub">42 open · <strong style="color:var(--bad);">7 overdue</strong> · 18 due this week</div></div>
+          <div style="display:flex;gap:8px;">
+            <div class="tabs"><div class="t on">Board</div><div class="t">List</div><div class="t">Calendar</div></div>
+            <span class="btn primary sm">+ Create task</span>
+          </div>
+        </div>
+        <div class="filters">
+          <span class="input">Owner: Me ▾</span>
+          <span class="input">Type: All ▾</span>
+          <span class="input">Priority: All ▾</span>
+          <span class="input">Due: This week ▾</span>
+          <span class="input ghost">+ Add filter</span>
+        </div>
+
+        <!-- KANBAN -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex:1;min-height:0;">
+          <!-- col -->
+          <div style="display:flex;flex-direction:column;gap:8px;min-height:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;"><div style="font-size:12px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em;">Today · 12</div><span class="meta">3 overdue</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:2px;">
+              <div class="card" style="padding:10px 12px;border-left:3px solid var(--bad);"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--bad);font-weight:700;"><span>Overdue · 2d</span><span class="chip lost"><span class="d"></span>High</span></div><div style="font-size:13px;font-weight:700;">Confirm billing PO — Acme</div><div style="font-size:11.5px;color:var(--muted);">Rohit Mehra · Acme</div></div>
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>14:30</span><span class="chip progress"><span class="d"></span>Med</span></div><div style="font-size:13px;font-weight:700;">Call back Vikas Patil</div><div style="font-size:11.5px;color:var(--muted);">Stride HR</div></div>
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>17:00</span><span class="chip new"><span class="d"></span>Low</span></div><div style="font-size:13px;font-weight:700;">Send onboarding deck</div><div style="font-size:11.5px;color:var(--muted);">Rohit Mehra</div></div>
+              <div class="card" style="padding:10px 12px;border-left:3px solid var(--bad);"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--bad);font-weight:700;"><span>Overdue · 1d</span><span class="chip lost"><span class="d"></span>High</span></div><div style="font-size:13px;font-weight:700;">Approve enterprise SOW</div><div style="font-size:11.5px;color:var(--muted);">Vega Capital</div></div>
+            </div>
+          </div>
+          <!-- col -->
+          <div style="display:flex;flex-direction:column;gap:8px;min-height:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;"><div style="font-size:12px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em;">Tomorrow · 8</div></div>
+            <div style="display:flex;flex-direction:column;gap:8px;overflow:auto;">
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>10:00</span><span class="chip progress"><span class="d"></span>Med</span></div><div style="font-size:13px;font-weight:700;">Demo · Bright Foods</div><div style="font-size:11.5px;color:var(--muted);">Neha Shah</div></div>
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>11:30</span><span class="chip new"><span class="d"></span>Low</span></div><div style="font-size:13px;font-weight:700;">Send proposal — Vega</div><div style="font-size:11.5px;color:var(--muted);">Ananya K.</div></div>
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>15:00</span><span class="chip new"><span class="d"></span>Low</span></div><div style="font-size:13px;font-weight:700;">Followup · webform leads</div><div style="font-size:11.5px;color:var(--muted);">3 leads</div></div>
+            </div>
+          </div>
+          <!-- col -->
+          <div style="display:flex;flex-direction:column;gap:8px;min-height:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;"><div style="font-size:12px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em;">This week · 14</div></div>
+            <div style="display:flex;flex-direction:column;gap:8px;overflow:auto;">
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>Wed</span><span class="chip progress"><span class="d"></span>Med</span></div><div style="font-size:13px;font-weight:700;">Loop in CSM — Acme</div><div style="font-size:11.5px;color:var(--muted);">Rohit Mehra</div></div>
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>Thu</span><span class="chip new"><span class="d"></span>Low</span></div><div style="font-size:13px;font-weight:700;">Quarter pipeline review</div><div style="font-size:11.5px;color:var(--muted);">Internal</div></div>
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>Fri</span><span class="chip new"><span class="d"></span>Low</span></div><div style="font-size:13px;font-weight:700;">Reactivate stale leads · 28</div><div style="font-size:11.5px;color:var(--muted);">Bulk action</div></div>
+            </div>
+          </div>
+          <!-- col -->
+          <div style="display:flex;flex-direction:column;gap:8px;min-height:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;"><div style="font-size:12px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em;">Done · 22</div><span class="meta">7d</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;overflow:auto;opacity:0.75;">
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>2h ago</span><span class="chip done"><span class="d"></span>Done</span></div><div style="font-size:13px;font-weight:700;text-decoration:line-through;color:var(--muted);">Sign contract · Acme</div></div>
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>Yesterday</span><span class="chip done"><span class="d"></span>Done</span></div><div style="font-size:13px;font-weight:700;text-decoration:line-through;color:var(--muted);">Send pricing v3 · Vega</div></div>
+              <div class="card" style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);"><span>Mon</span><span class="chip done"><span class="d"></span>Done</span></div><div style="font-size:13px;font-weight:700;text-decoration:line-through;color:var(--muted);">Call · Lumen Realty</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">06 / 13</div><div class="pagelabel">Tasks</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 07 UPLOADS -->
+<section data-screen-label="07 Uploads">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads</div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav active"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="ic"></div>Settings</div>
+    </div>
+    <div class="stage">
+      <div class="topbar"><div class="search"><span class="icn">⌕</span>Search…</div><div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div></div>
+      <div class="body">
+        <div class="page-h">
+          <div><h1>CSV uploads</h1><div class="sub">Bring leads in by file. Map fields, dedupe, and assign in one pass.</div></div>
+          <div style="display:flex;gap:8px;"><span class="btn outline sm">Download template</span><span class="btn primary sm">+ New upload</span></div>
+        </div>
+
+        <!-- dropzone -->
+        <div style="border:2px dashed var(--g300);background:#f4fbf4;border-radius:8px;padding:28px;display:flex;align-items:center;justify-content:space-between;gap:18px;">
+          <div>
+            <div style="font-size:18px;font-weight:800;color:var(--g900);">Drop a CSV here, or browse</div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:4px;">Max 50,000 rows · UTF-8 · use our template for fastest mapping. Required columns: <span class="mono">name, mobile</span>.</div>
+          </div>
+          <div style="display:flex;gap:8px;"><span class="btn primary">Choose file</span><span class="btn outline">Paste from clipboard</span></div>
+        </div>
+
+        <!-- KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div class="kpi"><div class="lbl">Files this month</div><div class="val-row"><div class="val">38</div></div><div class="delta">+6 vs last month</div></div>
+          <div class="kpi"><div class="lbl">Rows imported</div><div class="val-row"><div class="val">142,808</div></div><div class="delta">94% match rate</div></div>
+          <div class="kpi"><div class="lbl">Duplicates skipped</div><div class="val-row"><div class="val">3,209</div></div><div class="delta">2.2% of input</div></div>
+          <div class="kpi"><div class="lbl">Failed rows</div><div class="val-row"><div class="val bad">88</div></div><div class="delta down">Mostly missing mobile</div></div>
+        </div>
+
+        <!-- Active upload progress -->
+        <div class="panel">
+          <div class="panel-h"><h3>In progress</h3><span class="meta">2 active</span></div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:14px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;"><div><strong>acme-2026-04.csv</strong> · 12,430 rows</div><div class="m">Processing · 64%</div></div>
+              <div class="pbar" style="margin-top:6px;"><div style="width:64%"></div></div>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">Mapped 18 of 21 columns · ETA 2m</div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;"><div><strong>roi-prospects-q2.csv</strong> · 4,212 rows</div><div class="m">Validating · 22%</div></div>
+              <div class="pbar" style="margin-top:6px;"><div style="width:22%" class="warn"></div></div>
+              <div style="font-size:11.5px;color:var(--warn);margin-top:4px;">3 columns need attention</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- history -->
+        <div class="table" style="flex:1;">
+          <div class="thead" style="grid-template-columns:1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 60px;">
+            <div>File</div><div>Uploaded by</div><div>Rows</div><div>Imported</div><div>Stage</div><div>When</div><div></div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 60px;">
+            <div><strong>acme-mum-2026-q2.csv</strong><div class="sub">Source: SDR · West</div></div>
+            <div class="m">Priya Sharma</div><div class="m">8,402</div><div class="m">8,118</div>
+            <div><span class="chip done"><span class="d"></span>Completed</span></div><div class="m">Yesterday</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 60px;">
+            <div><strong>webinar-attendees-mar.csv</strong><div class="sub">Source: Marketing</div></div>
+            <div class="m">Karan Trivedi</div><div class="m">2,144</div><div class="m">2,098</div>
+            <div><span class="chip done"><span class="d"></span>Completed</span></div><div class="m">Mon</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 60px;">
+            <div><strong>partner-import-blr.csv</strong><div class="sub">Source: Channel</div></div>
+            <div class="m">Rahul Bhatt</div><div class="m">1,028</div><div class="m">0</div>
+            <div><span class="chip failed"><span class="d"></span>Failed · schema</span></div><div class="m">Mon</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.7fr 60px;">
+            <div><strong>g2-inquiries-week14.csv</strong><div class="sub">Source: G2</div></div>
+            <div class="m">Priya Sharma</div><div class="m">312</div><div class="m">298</div>
+            <div><span class="chip done"><span class="d"></span>Completed</span></div><div class="m">2 wk ago</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">07 / 13</div><div class="pagelabel">Uploads</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 08 AUTOMATION -->
+<section data-screen-label="08 Automation">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads</div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav active"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="ic"></div>Settings</div>
+    </div>
+    <div class="stage">
+      <div class="topbar"><div class="search"><span class="icn">⌕</span>Search…</div><div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div></div>
+      <div class="body">
+        <div class="page-h">
+          <div><h1>Automation</h1><div class="sub">14 workflows · 128 runs in last 24h · <strong style="color:var(--bad);">2 failed</strong></div></div>
+          <div style="display:flex;gap:8px;"><span class="btn outline sm">Run history</span><span class="btn outline sm">Templates</span><span class="btn primary sm">+ New workflow</span></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:280px 1fr 280px;gap:12px;flex:1;min-height:0;">
+          <!-- list -->
+          <div class="panel" style="display:flex;flex-direction:column;min-height:0;">
+            <div class="panel-h"><h3>Workflows</h3><span class="meta">14</span></div>
+            <div style="flex:1;overflow:auto;display:flex;flex-direction:column;">
+              <div style="padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(45,106,45,0.05);">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:13px;">Inbound webform routing</strong><span class="chip done"><span class="d"></span>On</span></div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">42 runs today · 2 failed · v12</div>
+              </div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:13px;">Stale lead reactivation</strong><span class="chip done"><span class="d"></span>On</span></div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">8 runs today · 0 failed</div>
+              </div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:13px;">SLA breach escalation</strong><span class="chip progress"><span class="d"></span>Paused</span></div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">Last run 2d ago</div>
+              </div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:13px;">Round-robin assignment · West</strong><span class="chip done"><span class="d"></span>On</span></div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">31 runs today · 0 failed</div>
+              </div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:13px;">WhatsApp no-show reminder</strong><span class="chip done"><span class="d"></span>On</span></div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">14 runs today</div>
+              </div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:13px;">G2 review autoresponder</strong><span class="chip queued"><span class="d"></span>Draft</span></div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">Never run</div>
+              </div>
+              <div style="padding:10px 14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:13px;">CSV: dedupe + assign</strong><span class="chip done"><span class="d"></span>On</span></div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">5 runs today</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- canvas -->
+          <div class="panel" style="display:flex;flex-direction:column;min-height:0;">
+            <div class="panel-h"><h3>Inbound webform routing</h3><div class="tabs"><div class="t on">Canvas</div><div class="t">Runs</div><div class="t">History</div></div></div>
+            <div class="canvas">
+              <div class="node trigger" style="left:30px;top:60px;"><div class="ntag">Trigger</div><div class="ntitle">Lead created</div><div class="nsub">source = webform</div></div>
+              <div class="edge" style="left:210px;top:90px;width:60px;"></div>
+
+              <div class="node action" style="left:280px;top:60px;"><div class="ntag">Filter</div><div class="ntitle">Has email AND mobile</div><div class="nsub">required to proceed</div></div>
+              <div class="edge" style="left:460px;top:90px;width:60px;"></div>
+
+              <div class="node action" style="left:530px;top:30px;"><div class="ntag">Action</div><div class="ntitle">Lookup company size</div><div class="nsub">via Clearbit connector</div></div>
+              <div class="node action" style="left:530px;top:130px;"><div class="ntag">Branch</div><div class="ntitle">Score &gt; 60?</div><div class="nsub">use lead-score model v3</div></div>
+              <div class="edge" style="left:710px;top:160px;width:60px;"></div>
+
+              <div class="node action" style="left:780px;top:130px;"><div class="ntag">Action</div><div class="ntitle">Assign · round-robin</div><div class="nsub">team = West · cap 25/day</div></div>
+              <div class="edge" style="left:960px;top:160px;width:60px;"></div>
+
+              <div class="node action" style="left:1030px;top:90px;"><div class="ntag">Action</div><div class="ntitle">Send welcome WhatsApp</div><div class="nsub">template t-welcome-en</div></div>
+              <div class="node action" style="left:1030px;top:200px;"><div class="ntag">Action</div><div class="ntitle">Create followup task</div><div class="nsub">due in 24h · owner=assignee</div></div>
+            </div>
+          </div>
+
+          <!-- inspector -->
+          <div class="panel" style="display:flex;flex-direction:column;min-height:0;">
+            <div class="panel-h"><h3>Node · Round-robin</h3><span class="chip done"><span class="d"></span>Selected</span></div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:10px;font-size:12.5px;">
+              <div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Pool</div><div style="font-weight:700;margin-top:3px;">Team · West Enterprise</div><div style="color:var(--muted);font-size:11.5px;">8 reps active · cap 25/day each</div></div>
+              <div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Method</div><div style="font-weight:700;margin-top:3px;">Round-robin (load-aware)</div></div>
+              <div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Skip if</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;"><span class="meta">on PTO</span><span class="meta">load &gt; 25</span><span class="meta">offline &gt; 1h</span></div>
+              </div>
+              <div style="border-top:1px solid var(--line);padding-top:10px;">
+                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Last 24h</div>
+                <div style="display:flex;gap:14px;margin-top:6px;font-size:12.5px;">
+                  <div><strong style="font-size:18px;">31</strong><div style="color:var(--muted);">runs</div></div>
+                  <div><strong style="font-size:18px;color:var(--g700);">31</strong><div style="color:var(--muted);">ok</div></div>
+                  <div><strong style="font-size:18px;">42ms</strong><div style="color:var(--muted);">p50</div></div>
+                </div>
+              </div>
+              <div style="margin-top:auto;display:flex;gap:6px;"><span class="btn primary sm">Save</span><span class="btn outline sm">Test run</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">08 / 13</div><div class="pagelabel">Automation</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 09 REPORTS -->
+<section data-screen-label="09 Reports">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads</div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav active"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="ic"></div>Settings</div>
+    </div>
+    <div class="stage">
+      <div class="topbar"><div class="search"><span class="icn">⌕</span>Search…</div><div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div></div>
+      <div class="body">
+        <div class="page-h">
+          <div><h1>Reports</h1><div class="sub">Pipeline · activity · automation · audit</div></div>
+          <div style="display:flex;gap:8px;">
+            <div class="tabs"><div class="t on">Summary</div><div class="t">Journey</div><div class="t">Comms</div><div class="t">Automation</div><div class="t">Audit</div><div class="t">Saved</div></div>
+            <span class="btn outline sm">Export PDF</span>
+          </div>
+        </div>
+        <div class="filters">
+          <span class="input">Range: Last 30d ▾</span>
+          <span class="input">Team: All ▾</span>
+          <span class="input">Owner: All ▾</span>
+          <span class="input">Source: All ▾</span>
+          <span class="input ghost">+ Add filter</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div class="kpi"><div class="lbl">Total leads</div><div class="val-row"><div class="val">12,480</div><div class="trend">+8%</div></div><div class="delta">vs prev 30d</div></div>
+          <div class="kpi"><div class="lbl">Conversion rate</div><div class="val-row"><div class="val">14.2%</div><div class="trend">+1.4pt</div></div><div class="delta">Pipeline → won</div></div>
+          <div class="kpi"><div class="lbl">Avg time-to-first-touch</div><div class="val-row"><div class="val">38m</div><div class="trend down">+6m</div></div><div class="delta down">SLA target 30m</div></div>
+          <div class="kpi"><div class="lbl">SLA compliance</div><div class="val-row"><div class="val">87%</div><div class="trend down">-3pt</div></div><div class="delta down">Below 90% target</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;flex:1;min-height:0;">
+          <!-- BIG CHART -->
+          <div class="panel" style="display:flex;flex-direction:column;">
+            <div class="panel-h"><h3>Pipeline by stage · 30 days</h3><div style="display:flex;gap:6px;"><span class="meta">Daily</span><span class="meta">Stacked</span></div></div>
+            <div style="flex:1;padding:18px;position:relative;">
+              <svg width="100%" height="100%" viewBox="0 0 720 320" preserveAspectRatio="none">
+                <!-- gridlines -->
+                <g stroke="#e0ede0" stroke-width="1">
+                  <line x1="40" y1="40"  x2="700" y2="40"/>
+                  <line x1="40" y1="100" x2="700" y2="100"/>
+                  <line x1="40" y1="160" x2="700" y2="160"/>
+                  <line x1="40" y1="220" x2="700" y2="220"/>
+                  <line x1="40" y1="280" x2="700" y2="280"/>
+                </g>
+                <!-- y labels -->
+                <g font-family="JetBrains Mono" font-size="9" fill="#526252">
+                  <text x="0" y="44">600</text><text x="0" y="104">450</text><text x="0" y="164">300</text><text x="0" y="224">150</text><text x="0" y="284">0</text>
+                </g>
+                <!-- stacked area: converted (g700), in-prog (g500), new (g300) -->
+                <path fill="#91c091" opacity="0.7" d="M40 260 L100 240 L160 250 L220 220 L280 200 L340 210 L400 180 L460 170 L520 150 L580 160 L640 140 L700 130 L700 280 L40 280 Z"/>
+                <path fill="#3f843f" opacity="0.85" d="M40 220 L100 200 L160 210 L220 180 L280 160 L340 170 L400 140 L460 130 L520 110 L580 120 L640 100 L700 90  L700 130 L640 140 L580 160 L520 150 L460 170 L400 180 L340 210 L280 200 L220 220 L160 250 L100 240 L40 260 Z"/>
+                <path fill="#245824" d="M40 180 L100 160 L160 170 L220 140 L280 120 L340 130 L400 100 L460 90 L520 70 L580 80 L640 60 L700 50  L700 90 L640 100 L580 120 L520 110 L460 130 L400 140 L340 170 L280 160 L220 180 L160 210 L100 200 L40 220 Z"/>
+                <!-- x labels -->
+                <g font-family="JetBrains Mono" font-size="9" fill="#526252">
+                  <text x="40" y="305">Apr 1</text><text x="220" y="305">Apr 8</text><text x="400" y="305">Apr 15</text><text x="580" y="305">Apr 22</text><text x="660" y="305">Apr 30</text>
+                </g>
+              </svg>
+              <div style="position:absolute;bottom:10px;right:18px;display:flex;gap:14px;font-size:11px;">
+                <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:2px;background:var(--g700);"></div>Converted</div>
+                <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:2px;background:var(--g500);"></div>In progress</div>
+                <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:2px;background:var(--g300);"></div>New</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LEADERBOARD -->
+          <div class="panel" style="display:flex;flex-direction:column;">
+            <div class="panel-h"><h3>Top reps · 30d</h3><span class="meta">By revenue</span></div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;"><span>Priya Sharma · West</span><span class="mono">₹42.8L</span></div>
+                <div class="pbar" style="margin-top:5px;"><div style="width:92%"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;"><span>Karan Trivedi · South</span><span class="mono">₹36.1L</span></div>
+                <div class="pbar" style="margin-top:5px;"><div style="width:78%"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;"><span>Rahul Bhatt · North</span><span class="mono">₹28.4L</span></div>
+                <div class="pbar" style="margin-top:5px;"><div style="width:62%"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;"><span>Anjali Iyer · West</span><span class="mono">₹22.0L</span></div>
+                <div class="pbar" style="margin-top:5px;"><div style="width:48%"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;"><span>Ishaan Roy · East</span><span class="mono">₹14.6L</span></div>
+                <div class="pbar" style="margin-top:5px;"><div style="width:31%"></div></div>
+              </div>
+              <div style="border-top:1px solid var(--line);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;">
+                <div><div style="color:var(--muted);">Best source</div><div style="font-weight:800;">Inbound · Webform</div></div>
+                <div><div style="color:var(--muted);">Best segment</div><div style="font-weight:800;">Enterprise · West</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">09 / 13</div><div class="pagelabel">Reports</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 10 CONNECTORS -->
+<section data-screen-label="10 Connectors">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads</div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav active"><div class="ic"></div>Connectors</div>
+    </div>
+    <div class="stage">
+      <div class="topbar"><div class="search"><span class="icn">⌕</span>Search…</div><div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div></div>
+      <div class="body">
+        <div class="page-h">
+          <div><h1>Connectors</h1><div class="sub">Telephony, messaging, voicebot, and API integrations · 6 of 9 live</div></div>
+          <div style="display:flex;gap:8px;"><span class="btn outline sm">Logs</span><span class="btn primary sm">+ Add connector</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;flex:1;">
+          <!-- card -->
+          <div class="card" style="padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="display:flex;gap:10px;align-items:center;"><div style="width:36px;height:36px;border-radius:8px;background:var(--g50);display:grid;place-items:center;font-weight:800;color:var(--g700);">☎</div><div><div style="font-size:14px;font-weight:800;">Exotel · Telephony</div><div style="font-size:11.5px;color:var(--muted);">Click-to-call &amp; recording</div></div></div>
+              <span class="chip done"><span class="d"></span>Live</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:6px;">
+              <div><div style="color:var(--muted);">Calls today</div><div style="font-weight:800;">158</div></div>
+              <div><div style="color:var(--muted);">Connect rate</div><div style="font-weight:800;">56%</div></div>
+              <div><div style="color:var(--muted);">Avg latency</div><div style="font-weight:800;">220ms</div></div>
+              <div><div style="color:var(--muted);">Uptime · 7d</div><div style="font-weight:800;">99.94%</div></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;"><span class="btn outline sm">Configure</span><span class="btn ghost sm">Logs</span></div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="display:flex;gap:10px;align-items:center;"><div style="width:36px;height:36px;border-radius:8px;background:var(--g50);display:grid;place-items:center;font-weight:800;color:var(--g700);">⌽</div><div><div style="font-size:14px;font-weight:800;">WhatsApp Business</div><div style="font-size:11.5px;color:var(--muted);">Templates &amp; inbound</div></div></div>
+              <span class="chip done"><span class="d"></span>Live</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:6px;">
+              <div><div style="color:var(--muted);">Sent today</div><div style="font-weight:800;">2,418</div></div>
+              <div><div style="color:var(--muted);">Delivered</div><div style="font-weight:800;">98.2%</div></div>
+              <div><div style="color:var(--muted);">Templates</div><div style="font-weight:800;">14</div></div>
+              <div><div style="color:var(--muted);">Quality rating</div><div style="font-weight:800;color:var(--g700);">High</div></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;"><span class="btn outline sm">Configure</span><span class="btn ghost sm">Templates</span></div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="display:flex;gap:10px;align-items:center;"><div style="width:36px;height:36px;border-radius:8px;background:var(--warn-bg);display:grid;place-items:center;font-weight:800;color:var(--warn);">★</div><div><div style="font-size:14px;font-weight:800;">Yellow.ai · Voicebot</div><div style="font-size:11.5px;color:var(--muted);">Outbound qualification</div></div></div>
+              <span class="chip progress"><span class="d"></span>Degraded</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:6px;">
+              <div><div style="color:var(--muted);">Calls today</div><div style="font-weight:800;">412</div></div>
+              <div><div style="color:var(--muted);">Errors · 1h</div><div style="font-weight:800;color:var(--warn);">7%</div></div>
+              <div><div style="color:var(--muted);">Avg duration</div><div style="font-weight:800;">2:14</div></div>
+              <div><div style="color:var(--muted);">Last incident</div><div style="font-weight:800;">12m ago</div></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;"><span class="btn outline sm">Investigate</span><span class="btn ghost sm">Logs</span></div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="display:flex;gap:10px;align-items:center;"><div style="width:36px;height:36px;border-radius:8px;background:var(--g50);display:grid;place-items:center;font-weight:800;color:var(--g700);">⇄</div><div><div style="font-size:14px;font-weight:800;">API · LMS sync</div><div style="font-size:11.5px;color:var(--muted);">Bidirectional · webhook</div></div></div>
+              <span class="chip done"><span class="d"></span>Live</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:6px;">
+              <div><div style="color:var(--muted);">Events today</div><div style="font-weight:800;">8,402</div></div>
+              <div><div style="color:var(--muted);">Failed · 24h</div><div style="font-weight:800;">12</div></div>
+              <div><div style="color:var(--muted);">p95 latency</div><div style="font-weight:800;">410ms</div></div>
+              <div><div style="color:var(--muted);">Uptime · 7d</div><div style="font-weight:800;">99.99%</div></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;"><span class="btn outline sm">Configure</span><span class="btn ghost sm">Logs</span></div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="display:flex;gap:10px;align-items:center;"><div style="width:36px;height:36px;border-radius:8px;background:var(--g50);display:grid;place-items:center;font-weight:800;color:var(--g700);">✉</div><div><div style="font-size:14px;font-weight:800;">SES · Email</div><div style="font-size:11.5px;color:var(--muted);">Transactional</div></div></div>
+              <span class="chip done"><span class="d"></span>Live</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:6px;">
+              <div><div style="color:var(--muted);">Sent today</div><div style="font-weight:800;">3,108</div></div>
+              <div><div style="color:var(--muted);">Bounce</div><div style="font-weight:800;">0.4%</div></div>
+              <div><div style="color:var(--muted);">Open rate</div><div style="font-weight:800;">31%</div></div>
+              <div><div style="color:var(--muted);">Reputation</div><div style="font-weight:800;color:var(--g700);">Good</div></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;"><span class="btn outline sm">Configure</span><span class="btn ghost sm">Logs</span></div>
+          </div>
+          <div class="card" style="padding:16px;border:1px dashed var(--line-2);background:transparent;align-items:center;justify-content:center;">
+            <div style="text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;">
+              <div style="width:36px;height:36px;border-radius:8px;background:var(--soft);display:grid;place-items:center;color:var(--g700);font-weight:800;">＋</div>
+              <div style="font-size:14px;font-weight:800;">Add connector</div>
+              <div style="font-size:11.5px;color:var(--muted);">Telephony, messaging, voicebot, CRM, BI</div>
+              <span class="btn outline sm">Browse marketplace</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">10 / 13</div><div class="pagelabel">Connectors</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 11 USERS / TEAMS -->
+<section data-screen-label="11 Users and teams">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads</div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav active"><div class="ic"></div>Users</div>
+    </div>
+    <div class="stage">
+      <div class="topbar"><div class="search"><span class="icn">⌕</span>Search…</div><div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div></div>
+      <div class="body">
+        <div class="page-h">
+          <div><h1>Users &amp; teams</h1><div class="sub">142 users · 18 teams · 4 sales groups</div></div>
+          <div style="display:flex;gap:8px;">
+            <div class="tabs"><div class="t on">Users</div><div class="t">Teams</div><div class="t">Sales groups</div><div class="t">Permissions</div></div>
+            <span class="btn primary sm">+ Invite user</span>
+          </div>
+        </div>
+        <div class="filters">
+          <span class="input">Role: All ▾</span>
+          <span class="input">Team: All ▾</span>
+          <span class="input">Status: Active ▾</span>
+          <span class="input ghost">+ Add filter</span>
+          <span style="margin-left:auto;font-size:12px;color:var(--muted);">142 users</span>
+        </div>
+        <div class="table" style="flex:1;">
+          <div class="thead" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div>Name</div><div>Email</div><div>Role</div><div>Team</div><div>Status</div><div>Last seen</div><div></div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">PS</div><div><div class="name">Priya Sharma</div><div class="sub">Mumbai</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="88f8fae1f1e9c8fde6e6e9fce1eef1a6e1e6">[email&#160;protected]</a></div>
+            <div><span class="meta">Manager</span></div>
+            <div class="m">West · Enterprise</div>
+            <div><span class="chip done"><span class="d"></span>Active</span></div>
+            <div class="m">Now</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">KT</div><div><div class="name">Karan Trivedi</div><div class="sub">Bengaluru</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="046f6576656a44716a6a65706d627d2a6d6a">[email&#160;protected]</a></div>
+            <div><span class="meta">Rep</span></div>
+            <div class="m">South · Mid-market</div>
+            <div><span class="chip done"><span class="d"></span>Active</span></div>
+            <div class="m">12m ago</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">RB</div><div><div class="name">Rahul Bhatt</div><div class="sub">Delhi</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b0c2d1d8c5dcf0c5deded1c4d9d6c99ed9de">[email&#160;protected]</a></div>
+            <div><span class="meta">Rep</span></div>
+            <div class="m">North · SMB</div>
+            <div><span class="chip done"><span class="d"></span>Active</span></div>
+            <div class="m">2h ago</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">AI</div><div><div class="name">Anjali Iyer</div><div class="sub">Mumbai</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c9a8a7a3a8a5a089bca7a7a8bda0afb0e7a0a7">[email&#160;protected]</a></div>
+            <div><span class="meta">Rep</span></div>
+            <div class="m">West · Enterprise</div>
+            <div><span class="chip progress"><span class="d"></span>On PTO</span></div>
+            <div class="m">2d ago</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">IR</div><div><div class="name">Ishaan Roy</div><div class="sub">Kolkata</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8ce5ffe4edede2ccf9e2e2edf8e5eaf5a2e5e2">[email&#160;protected]</a></div>
+            <div><span class="meta">Rep</span></div>
+            <div class="m">East · SMB</div>
+            <div><span class="chip done"><span class="d"></span>Active</span></div>
+            <div class="m">38m ago</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">SM</div><div><div class="name">Sneha Menon</div><div class="sub">Chennai</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d2a1bcb7bab392a7bcbcb3a6bbb4abfcbbbc">[email&#160;protected]</a></div>
+            <div><span class="meta">Admin</span></div>
+            <div class="m">Ops</div>
+            <div><span class="chip done"><span class="d"></span>Active</span></div>
+            <div class="m">5m ago</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">DK</div><div><div class="name">Dev Kulkarni</div><div class="sub">Pune</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="660203102613080807120f001f480f08">[email&#160;protected]</a></div>
+            <div><span class="meta">Rep</span></div>
+            <div class="m">West · Mid-market</div>
+            <div><span class="chip queued"><span class="d"></span>Invited</span></div>
+            <div class="m">Pending</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+          <div class="trow" style="grid-template-columns:1.4fr 1.2fr 0.7fr 0.8fr 0.6fr 0.7fr 60px;">
+            <div style="display:flex;gap:10px;align-items:center;"><div class="av">MV</div><div><div class="name">Maya Verma</div><div class="sub">Bengaluru</div></div></div>
+            <div class="m"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0a676b736b4a7f64646b7e636c73246364">[email&#160;protected]</a></div>
+            <div><span class="meta">Rep</span></div>
+            <div class="m">South · Enterprise</div>
+            <div><span class="chip lost"><span class="d"></span>Suspended</span></div>
+            <div class="m">14d ago</div>
+            <div style="text-align:right;color:var(--muted);">⋯</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">11 / 13</div><div class="pagelabel">Users &amp; teams</div>
+</section>
+
+<!-- ============================================================== -->
+<!-- 12 SETTINGS -->
+<section data-screen-label="12 Settings">
+  <div class="app">
+    <div class="side">
+      <div class="brand"><div class="lm">U</div><div class="nm">Unnatify</div></div>
+      <div class="group">Pipeline</div>
+      <div class="nav"><div class="ic"></div>Dashboard</div>
+      <div class="nav"><div class="ic cir"></div>Leads</div>
+      <div class="nav"><div class="ic"></div>Activities</div>
+      <div class="nav"><div class="ic"></div>Tasks<span class="badge warn">7</span></div>
+      <div class="group">Operations</div>
+      <div class="nav"><div class="ic"></div>Uploads</div>
+      <div class="nav"><div class="ic"></div>Automation</div>
+      <div class="nav"><div class="ic"></div>Reports</div>
+      <div class="spacer"></div>
+      <div class="nav active"><div class="ic"></div>Settings</div>
+    </div>
+    <div class="stage">
+      <div class="topbar"><div class="search"><span class="icn">⌕</span>Search…</div><div class="top-right"><div class="who"><div class="n">Priya Sharma</div><div class="r">Sales Manager · Mumbai</div></div><div class="avatar">PS</div></div></div>
+      <div class="body" style="padding:22px 32px;">
+        <div class="page-h">
+          <div><h1 style="font-size:32px;">Settings</h1><div class="sub">Workspace · fields · lists · activity types · uploads · security</div></div>
+        </div>
+        <div style="display:flex;gap:18px;flex:1;min-height:0;">
+          <div class="subnav">
+            <div class="it">Workspace</div>
+            <div class="it on">Fields</div>
+            <div class="it">Lists</div>
+            <div class="it">Activity types</div>
+            <div class="it">Connectors</div>
+            <div class="it">Uploads</div>
+            <div class="it">Users</div>
+            <div class="it">Security</div>
+            <div class="it">Audit log</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:14px;min-height:0;">
+            <div class="page-h">
+              <div><div style="font-size:20px;font-weight:800;">Lead fields</div><div class="sub">22 fields · 8 custom · drag to reorder · click to edit</div></div>
+              <div style="display:flex;gap:8px;"><span class="btn outline sm">Export schema</span><span class="btn primary sm">+ Add field</span></div>
+            </div>
+            <div class="table" style="flex:1;">
+              <div class="thead" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;">
+                <div></div><div>Field</div><div>Key</div><div>Type</div><div>Required</div><div>Visibility</div><div></div>
+              </div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>Customer name</strong><div class="sub">Standard · indexed</div></div><div class="mono m">customerName</div><div class="m">Text</div><div><span class="chip done"><span class="d"></span>Yes</span></div><div class="m">All roles</div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>Mobile</strong><div class="sub">Standard · indexed · unique</div></div><div class="mono m">mobile</div><div class="m">Phone</div><div><span class="chip done"><span class="d"></span>Yes</span></div><div class="m">All roles</div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>Email</strong><div class="sub">Standard</div></div><div class="mono m">email</div><div class="m">Email</div><div class="m">No</div><div class="m">All roles</div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>Status</strong><div class="sub">Drives lifecycle</div></div><div class="mono m">status</div><div class="m">Select</div><div><span class="chip done"><span class="d"></span>Yes</span></div><div class="m">All roles</div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>Branch code</strong><div class="sub">Custom</div></div><div class="mono m">branchCode</div><div class="m">Text</div><div class="m">No</div><div class="m">Manager+</div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>Annual revenue</strong><div class="sub">Custom · gated</div></div><div class="mono m">annualRevenue</div><div class="m">Number</div><div class="m">No</div><div><span class="chip assigned"><span class="d"></span>Manager only</span></div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>GST number</strong><div class="sub">Custom · validated</div></div><div class="mono m">gstNumber</div><div class="m">Text</div><div class="m">No</div><div class="m">All roles</div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>Preferred language</strong><div class="sub">Custom</div></div><div class="mono m">language</div><div class="m">Multi-select</div><div class="m">No</div><div class="m">All roles</div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+              <div class="trow" style="grid-template-columns:32px 1.4fr 0.8fr 0.6fr 0.6fr 0.7fr 60px;"><div style="color:var(--muted);">⋮⋮</div><div><strong>Last contacted at</strong><div class="sub">System · auto-updated</div></div><div class="mono m">lastContactedAt</div><div class="m">Datetime</div><div class="m">No</div><div class="m">All roles</div><div style="text-align:right;color:var(--muted);">⋯</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">12 / 13</div><div class="pagelabel">Settings</div>
+</section>
+</deck-stage>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

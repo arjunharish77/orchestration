@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+uploads
+logs
+.git
+.env
+.env.*
+npm-debug.log*
+

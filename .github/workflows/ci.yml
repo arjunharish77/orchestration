@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: unnatify_crm
+          POSTGRES_USER: unnatify_user
+          POSTGRES_PASSWORD: unnatify_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://unnatify_user:unnatify_password@127.0.0.1:5432/unnatify_crm
+      REDIS_URL: redis://127.0.0.1:6379
+      JWT_SECRET: ci_jwt_secret_change_in_real_env
+      APP_URL: http://127.0.0.1:3000
+      API_URL: http://127.0.0.1:4000
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:4000
+      CORS_ORIGINS: http://127.0.0.1:3000
+      TEST_API_URL: http://127.0.0.1:4000
+      TEST_ADMIN_EMAIL: admin@unnatify.local
+      TEST_ADMIN_PASSWORD: ChangeMe123!
+      SMOKE_ADMIN_EMAIL: admin@unnatify.local
+      SMOKE_ADMIN_PASSWORD: ChangeMe123!
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Validate Prisma migrations
+        run: npm run prisma:deploy -w backend
+
+      - name: Seed database
+        run: npm run seed -w backend
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Backend unit tests
+        run: npm run test:unit -w backend
+
+      - name: Start backend
+        run: |
+          npm run dev -w backend > /tmp/unnatify-backend.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4000/health && exit 0
+            sleep 2
+          done
+          cat /tmp/unnatify-backend.log
+          exit 1
+
+      - name: Backend integration smoke
+        run: npm run test:integration -w backend
+
+      - name: Backend deep remediation smoke
+        run: npm run test:deep-remediation -w backend
+
+      - name: Backend enterprise parity smoke
+        run: npm run test:enterprise-parity -w backend
+
+      - name: Frontend architecture smoke
+        run: npm run test:architecture -w frontend
+
+      - name: Build
+        run: npm run build
+
+      - name: Docker build check
+        run: docker compose build --pull
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high

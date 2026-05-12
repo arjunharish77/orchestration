@@ -1,0 +1,1198 @@
+# Unnatify CRM Implementation Task Tracker
+
+This tracker is derived from `Build-Blueprint-and-Module-Plan.md` and `Codex Project Context: Unnatify CRM.txt`.
+
+Status key:
+
+- `[x]` Done and locally verified at least once.
+- `[~]` Partially implemented; more work remains.
+- `[ ]` Pending.
+- `[blocked]` Waiting for business/provider details.
+
+## Phase 1: Project Foundation
+
+- [x] Create monorepo structure for frontend, backend, and workers.
+- [x] Set up Next.js frontend with TypeScript.
+- [x] Set up NestJS backend with TypeScript.
+- [x] Set up worker package scaffold.
+- [x] Add PostgreSQL and Redis to Docker Compose.
+- [x] Bind local service ports to `127.0.0.1`.
+- [x] Add Dockerfiles for frontend, backend, and workers.
+- [x] Add `.env` and `.env.example` baseline.
+- [x] Add Prisma schema and initial migration.
+- [x] Add health endpoints: `/health`, `/health/db`, `/health/redis`.
+- [x] Add seed data for roles, system user, admin user, teams, sample users, leads, connectors, and workflows.
+- [x] Verify backend typecheck and build.
+- [x] Verify frontend typecheck and build.
+- [x] Add structured application logger.
+- [x] Add request logging middleware with masked sensitive fields.
+- [x] Add production log file rotation strategy inside app/container.
+- [x] Add worker health check endpoint or heartbeat record.
+
+## Phase 2: Authentication and Users
+
+- [x] Implement email/password login.
+- [x] Hash passwords with bcrypt.
+- [x] Issue JWT access token.
+- [x] Seed first Administrator user.
+- [x] Seed System user.
+- [x] Add JWT payload with user id, email, and role.
+- [x] Add JWT auth guard foundation; apply broadly after frontend login is wired.
+- [x] Add current-user API.
+- [x] Add logout/session invalidation strategy.
+- [x] Add refresh token or session expiry handling.
+- [x] Add frontend login screen.
+- [x] Connect frontend shell to authenticated user context.
+- [x] Add password reset request flow.
+- [x] Add password reset confirmation flow using Resend.
+- [x] Add email OTP request/verify endpoints.
+- [x] Add account-level 2FA enable/disable setting.
+- [x] Add admin-only user-level 2FA enable/disable setting.
+- [x] Enforce 2FA policy during login.
+- [x] Configure Resend API key and sender address locally.
+- [x] Confirm Resend sender/domain is verified and production-safe.
+
+## Phase 3: Roles, Teams, Sales Groups, and Permissions
+
+- [x] Add tables/models for roles, teams, sales groups, user-sales-group mapping, permission templates, module permissions, and field permissions.
+- [x] Seed fixed roles: Administrator, Sales Manager, Sales User.
+- [x] Enforce one team per user in schema.
+- [x] Add Access overview API.
+- [x] Implement effective permission template resolver.
+- [x] Add module/action permission evaluation API.
+- [x] Add field-level access values: visible, editable, hidden, masked.
+- [x] Enforce field-level masking/hiding on lead reads when `userId` is supplied.
+- [x] Add API to upsert field permission rules.
+- [x] Add full user CRUD APIs.
+- [x] Add role management APIs for viewing fixed roles.
+- [x] Add team CRUD APIs.
+- [x] Add sales group CRUD APIs.
+- [x] Add user-to-sales-group management APIs.
+- [x] Add permission template CRUD APIs.
+- [x] Add module permission CRUD APIs.
+- [x] Enforce module permissions across create/edit/delete/export/upload/configure endpoints.
+- [x] Enforce field editability on write APIs.
+- [x] Apply field-level rules to Activities.
+- [x] Apply field-level rules to Users and user custom fields.
+- [x] Add configurable mandatory-field enforcement for Users, Leads, and Activities.
+- [x] Add mandatory-field rule management UI for module, field, role/team/context, required, and active state.
+- [x] Add frontend Users & Access management screens.
+- [x] Expose sales group assignment in user create/edit dialogs.
+- [x] Add frontend Team management screen.
+- [x] Add frontend Sales Group management screen.
+- [x] Add frontend Permission Template editor.
+
+### Confirmed Permission, Visibility, Search, and Export Decisions
+
+- [x] Permission template is the source of truth for actual user access; role is mainly identity/default behavior.
+- [x] `Administrator Full Access` is locked and always forces all modules/actions/fields to full access.
+- [x] `Sales Manager` and `Sales User` system templates are editable by admins.
+- [x] Admins can create multiple custom permission templates and assign one template per user.
+- [x] Dashboard, Leads, Activities, CSV Uploads, Tasks, Automation, Reports, and Settings visibility are controlled by permission templates.
+- [x] If a module is not visible, hide it from the sidebar and block direct route access with a `No access` page.
+- [x] If a user has no visible modules, show a `No modules assigned` page after login.
+- [x] Dashboard cards show only metrics from modules the user can view.
+- [x] Settings is controlled only as a module; no section-level Settings permission split is required.
+- [x] Any user with Settings module permission can perform Settings actions.
+- [x] Admin Operations Center stays separate from permission templates and is available only through the special backend-created ops login.
+- [x] Field permissions use exactly `visible`, `editable`, `hidden`, and `masked`.
+- [x] Masked phone fields show partial values like `******3210`.
+- [x] Masked email/name/text fields keep partial characters like `ra***@domain.com` or `Ra***`.
+- [x] Hidden fields are removed from forms, tables, details, column selectors, filters, exports, and global search.
+- [x] Masked fields remain filterable/searchable, but are excluded from exports for users without full field access.
+- [x] Hidden fields can remain in API responses for now; frontend hiding is acceptable for current phase.
+- [x] Lead actions: view, create, edit, delete, export, assign, bulk assign, click-to-call, add task, add disposition, view audit.
+- [x] Activity permissions are configured per activity type.
+- [x] `001 - Call` activity permissions: view, export, play recording only.
+- [x] Non-call activity type permissions: view, create, edit, delete, export.
+- [x] Activity field permissions are configured per activity type and use visible/editable/hidden/masked.
+- [x] Task actions: view, create, edit, close/complete, reschedule, assign, delete, export.
+- [x] CSV Upload actions: view upload history, upload CSV, download uploaded CSV, download result CSV, view failed rows, export.
+- [x] Automation actions: view, create, edit, delete, clone, activate/deactivate, run/test, view run history, export.
+- [x] Report actions: view, filter, export, download scheduled/export history.
+- [x] All connector logs, raw webhook/API request/response logs, system logs, and technical execution logs are visible only to Administrator users.
+- [x] Permission templates control lead record visibility with scopes: own leads only, team leads, sales group leads, all leads.
+- [x] Tasks and activities inherit visibility from their linked lead.
+- [x] Records not linked to a lead are visible only to admins.
+- [x] Assignment can only act on leads the user can see.
+- [x] Assignment targets are limited to users within the assigner's visible team/sales group scope.
+- [x] `Administrator Full Access` bypasses record visibility scopes and assignment target limits.
+- [x] Sales group visibility crosses team boundaries and combines all sales groups assigned to a user.
+- [x] Leads are assigned only to users, not directly to sales groups.
+- [x] Unassigned/System-owned leads are visible only to all-leads scope users and admin full access.
+- [x] Newly created/uploaded leads default to special non-login owner `System`.
+- [x] Assignment automation treats System-owned leads as unassigned/available.
+- [x] Manual assignment of System-owned leads, including assigning back to System, requires all-leads visibility plus assign permission.
+- [x] `System` appears in owner filters/columns and is also an assignable target.
+- [x] Automation assignment audit/history shows actor as `System` and stores automation/workflow/run ID in metadata.
+- [x] Record visibility is based only on current lead owner; previous owners do not retain access unless their current scope permits it.
+- [x] Notes, audit, and history remain visible to the new owner if they can view the lead, subject to module/field permissions.
+- [x] Tasks are not visible unless the linked lead is visible, even if the task is assigned to the user.
+- [x] Global search returns only leads, respects record visibility, searches masked fields, excludes hidden fields, and opens lead detail on selection.
+- [x] Global search remains lead-only; do not include tasks or activities unless requirements change later.
+- [x] Settings UI final direction is reference-style: left settings navigation, large section page, create/edit via modals, and no always-visible inline create forms.
+- [x] Lead list saved views are required now.
+- [x] Lead list saved views are private per user.
+- [x] Each user can mark one private lead saved view as their default Leads page view.
+- [x] Lead saved views store quick filters, advanced filters, visible columns, sort, and density, not selected rows.
+- [x] Lead detail shows `No access` if the lead exists but is outside the user's visibility scope.
+- [x] Exports include only the current filtered and visible list.
+- [x] Bulk actions operate only on selected visible rows.
+- [x] Lead detail tabs should be only Activities, Tasks, Dispositions, Calls, Automation History, and Audit.
+- [x] Overview, Notes, and Custom Fields tabs should be hidden/removed from lead detail.
+- [x] Lead standard/custom fields should show in the left lead profile/properties section.
+- [x] Lead name, mobile, and email stay in the lead profile header.
+- [x] Lead profile field groups: Customer, Loan Details, System Details, Custom Fields.
+- [x] Customer group is expanded by default; Loan Details, System Details, and Custom Fields are collapsed by default.
+- [x] Customer group fields: customer location, preferred language, partner mapping, owner, source, lead status, lead category, lead disposition.
+- [x] Loan Details group fields: Loan ID / Lead ID, loan offer amount, EMI amount, loan closure / offer expiry date, branch code, branch name.
+- [x] System Details group fields: upload date, created timestamp, updated timestamp.
+- [x] Upload batch/file/import status stays only in CSV Uploads / Upload History, not lead detail.
+- [x] All lead custom fields appear in one Custom Fields group.
+- [x] Owner name should show in lead profile.
+- [x] Owner change from lead detail opens assignment modal with eligible users and System.
+- [x] Lead list bulk owner change uses the same assignment modal with selected lead count and eligible targets.
+- [x] CSV upload field configuration lives inside Settings -> Fields & Disposition.
+- [x] CSV upload required/optional rules are separate from normal lead form mandatory rules.
+- [x] CSV upload mapping supports standard lead fields and lead custom fields.
+- [x] Only one active default CSV mapping configuration is needed.
+- [x] Upload auto-maps by headers first, then users can manually adjust mapping for that batch.
+- [x] Manual upload mapping changes apply only to the current upload batch.
+- [x] Missing required CSV fields after mapping blocks the upload before processing.
+- [x] Row-level validation imports valid rows and marks invalid rows failed.
+- [x] Duplicate CSV rows/leads are skipped and marked failed.
+- [x] Duplicate detection uses configurable composite keys from any standard/custom lead fields.
+- [x] Duplicate rule applies to CSV upload and manual lead creation.
+- [x] Manual duplicate creation is blocked with a duplicate warning.
+- [x] Duplicate checks cannot be bypassed.
+- [x] Duplicate matching trims and case-normalizes text fields.
+- [x] Blank duplicate-key fields fail validation.
+- [x] Lead Status can change from any value to any value, subject to permission.
+- [x] Lead Category can change from any value to any value, subject to permission.
+- [x] Lead Disposition is independent and should not automatically update Lead Status or Lead Category unless automation handles it.
+- [x] Status/category/disposition changes create system activity/audit entries with old/new values.
+- [x] Status/category/disposition changes appear in both lead detail Activities and Audit by default.
+- [x] Status/category/disposition activity message format: `Status changed from New to Converted by Rahul M`.
+- [x] Lead created appears in both lead detail Activities and Audit by default.
+- [x] Lead created activity message format: `Lead created by System` or `Lead created by Rahul M`.
+- [x] Other lead field edits show only in Audit, not Activities.
+- [x] Owner assignment/reassignment appears in both Audit and Activities.
+- [x] Assignment activity message format: `Owner changed from System to Rahul M by System`.
+- [x] Manual assignment uses the logged-in user as actor in assignment activity text.
+- [x] Task creation and task completion appear in Activities.
+- [x] Task reschedule/reassign/update stays in Tasks/Audit only.
+- [x] CSV upload/import events appear only in Upload History.
+- [x] Automation actions on a lead appear only in Automation History.
+- [x] WhatsApp and Voicebot events appear in Activities.
+- [x] Telephony Call Log Complete call activities appear in both Activities and Calls.
+- [x] Calls tab shows call-specific columns/details; Activities shows compact timeline entries.
+- [x] Global Activities page visibility is configurable per activity type.
+- [x] Activity type visibility options are global Activities, lead detail Activities, both, or neither.
+- [x] Audit visibility is separate and controlled by audit permission, independent of activity type visibility.
+- [x] Activity type configuration lives in Settings -> Activity Types.
+- [x] Admins can create/edit/delete non-system activity types.
+- [x] System activity types are protected from deletion.
+- [x] System activity types allow editing display name, visibility, and permissions, while code and system behavior remain locked.
+- [x] Activity type codes are auto-generated as 3-digit codes.
+- [x] System activity type codes are fixed/reserved; custom activity types start after system codes.
+- [x] Default activity visibility: Call global + lead detail; Lead Created lead detail only; Status/Category/Disposition Changed lead detail only; Task Created/Completed lead detail only; WhatsApp/Voicebot global + lead detail.
+- [x] Activity custom fields are defined per activity type.
+- [x] Each activity type has its own configurable creation form layout/order.
+- [x] Activity type fields are available in automation as trigger/context fields and create-activity fields.
+- [x] Activity type fields are available in global Activities filters/columns based on selected activity type.
+- [x] Activity type fields are available in lead detail Activities filters/columns based on selected activity type.
+- [x] Lead detail Activities defaults to all visible activity types.
+- [x] Mixed activity list stays compact; type-specific fields show only when expanding an activity item.
+- [x] No activity detail route and no activity detail modal/drawer.
+- [x] Clicking an activity expands inline to show details and activity-created/activity-updated audit data.
+- [x] Expanded activity details show old/new values for activity updates.
+- [x] Expanded activity details respect hidden/masked activity field permissions.
+- [x] System activity types like Lead Created and Status Changed are not expandable.
+- [x] Call recording play is a direct button without expansion.
+- [x] Call activities are expandable for call metadata.
+- [x] WhatsApp and Voicebot activities are expandable for message/call details.
+- [x] Manually created non-call activities are editable after creation, subject to permission.
+- [x] Activity edits create audit entries and show old/new values inside expanded activity.
+- [x] Activity types can be deactivated so old records remain visible.
+- [x] Deactivated activity types are hidden from creation forms but remain available in filters/history.
+- [x] Task types are configurable.
+- [x] Task statuses are configurable.
+- [x] Task priority is fixed: Low, Medium, High.
+- [x] Only exact status `Completed` counts as completed.
+- [x] Task due date is not mandatory.
+- [x] Task assignee is mandatory.
+- [x] Task assignee choices are limited to users who can see the linked lead.
+- [x] Tasks are always linked to a lead.
+- [x] Task comments are not needed in the visible app; keep only remarks/description.
+- [x] Task updates create audit entries.
+- [x] Task created/completed activity messages: `Task created: Callback by Rahul M` and `Task completed: Callback by Rahul M`.
+- [x] Completed tasks become read-only except reopening/status change.
+- [x] Reopening a task is audit only.
+- [x] Task reminders/notifications are a later enhancement.
+- [x] Task quick filters remain Due today, Overdue, Assigned to me, Priority.
+- [x] Automation workflows use draft and published versions; only published versions run.
+- [x] Automation activation requires a published version.
+- [x] Publishing validates workflow and blocks missing required node settings.
+- [x] Draft workflows can be test-run on selected leads before publishing.
+- [x] Automation test-runs make real changes and real connector calls.
+- [x] Test-runs are marked as `Test Run` in logs/history.
+- [x] No separate test-run permission is needed beyond automation edit/run access.
+- [x] Activated automation triggers run only on future events; no automatic backfill.
+- [x] Manual bulk `Run automation on selected leads` is required.
+- [x] Manual bulk automation runs use the currently published version and are marked as `Manual Run`.
+- [x] Exit conditions are checked before every node and stop the run immediately when matched.
+- [x] Connector/API nodes retry automatically on failure.
+- [x] Retry count and delay are configurable per connector/API node only.
+- [x] After all connector/API retries fail, the automation run stops.
+- [x] Failed automation runs are manually retryable from Automation History and resume from failed node.
+- [x] Automation API node logs store full request/response bodies, masked by permissions like connector logs.
+- [x] Full automation API request/response bodies are visible only to Administrator users.
+- [x] Lead Automation History requires lead visibility and Automation module permission.
+- [x] Lead Automation History tab is hidden when user lacks Automation module permission.
+- [x] One generic API connector configuration represents one API action/endpoint.
+- [x] API connector `{{...}}` suggestions include lead fields, user fields, activity fields, and custom fields.
+- [x] Automation node setup maps only variables actually used in the selected API connector.
+- [x] API connector successful HTTP response without expected response keyword is marked `completed_with_warning`.
+- [x] Assignment rules support user capacity limits.
+- [x] Assignment capacity can be configured per user and used/overridden per assignment rule.
+- [x] Online/offline status does not affect assignment.
+- [x] Assignment considers only active users.
+- [x] Assignment fallback user can be configured globally and overridden per rule.
+- [x] Assignment rules support weighted distribution with user weight configured per rule.
+- [x] Round-robin counter reset is configurable: never, daily, weekly, monthly.
+- [x] Assignment rules support priority/order; first matching rule wins.
+- [x] Admins can reorder assignment rules manually.
+- [x] Assignment rules can reassign already-owned leads.
+- [x] Assignment rules may assign back to the same current owner.
+- [x] If owner remains the same, do not create activity and do not record assignment run history.
+- [x] Assignment run history is recorded only when owner actually changes.
+- [x] Saved reports are a later enhancement.
+- [x] Scheduled reports are a later enhancement.
+- [x] Small report exports download immediately.
+- [x] Large report exports run asynchronously with export history.
+- [x] Large report threshold is row count, default more than 10,000 rows.
+- [x] User-facing report export history appears inside Reports only.
+- [x] Report metrics/cards respect record visibility and field masking rules.
+- [x] Report drilldowns are required and open in a modal.
+- [x] Drilldown modals show filtered records in a table with export option.
+- [x] Drilldown rows with a lead open lead detail page.
+- [x] Report drilldown rows do not expose lead action menus; actions happen from lead detail/list pages.
+- [x] All report tabs support date range filters.
+- [x] Reports include team, sales group, owner, status/category/disposition filters where relevant.
+- [x] Inbound WhatsApp messages from unknown numbers create a new lead.
+- [x] WhatsApp-created leads default to System owner and source `WhatsApp`.
+- [x] Unknown WhatsApp lead uses WhatsApp phone as mobile and provider name if available, otherwise `WhatsApp Lead <phone>`.
+- [x] Inbound and outbound WhatsApp messages create Activity entries.
+- [x] WhatsApp chat is visible only when user can view linked lead.
+- [x] WhatsApp message bodies are visible in chat/activity according to lead visibility.
+- [x] WhatsApp message bodies should not be masked in connector logs.
+- [x] Full WhatsApp connector logs are visible only to Administrator users.
+- [x] WhatsApp opt-out blocking is not required now.
+- [x] WhatsApp templates are configurable in Settings with `{{lead.field}}` suggestions.
+- [x] WhatsApp template variables are mappable in automation node setup.
+- [x] Counsellors can send templates first; after customer reply, 24-hour service window allows free text and media.
+- [x] WhatsApp 24-hour service window is based on last inbound customer message timestamp.
+- [x] WhatsApp media support includes image, document/PDF, audio, and video.
+- [x] Voicebot webhooks with unknown/unmatched phone numbers should be logged without creating a new lead.
+- [x] Matched Voicebot webhook results should create a lead Activities timeline entry.
+- [x] Voicebot activity entries should appear in both global Activities and lead detail Activities.
+- [x] Voicebot webhook results should not directly update lead disposition, status, or category.
+- [x] Lead updates from Voicebot outcomes should happen only through automation.
+- [x] Voicebot activity title is fixed as `Voicebot call`; provider intent/disposition/details stay in fields/details.
+- [x] Voicebot activities store recording URL/details when provided, but do not show a recording playback button because playback is restricted to `001 - Call`.
+- [x] Recording playback visibility is restricted to call activities only.
+- [x] Voicebot transcript and summary appear in expanded activity details when available.
+- [x] Voicebot transcript and summary visibility follows the same activity field permission and masking rules.
+- [x] Voicebot automation triggers are condition-driven from mapped webhook fields such as lead id, phone, intent, disposition, status, or custom mapped fields.
+- [x] Voicebot webhook lead matching uses only fields selected in connector mapping.
+- [x] Voicebot webhook lead matching succeeds when any one selected match field matches.
+- [x] If Voicebot matching finds multiple leads, attach to the most recently updated lead and log ambiguity.
+- [x] Voicebot connector logs follow the global Administrator-only log visibility rule.
+
+### Permission and Visibility Implementation Tasks From Clarifications
+
+- [x] Add/verify module visibility enforcement for Dashboard, Leads, Activities, CSV Uploads, Tasks, Automation, Reports, and Settings in sidebar and direct routes.
+- [x] Add `No modules assigned` fallback after login when no module is visible.
+- [x] Filter Dashboard cards by visible modules.
+- [x] Ensure Settings module permission is module-level only and Settings actions work for any user with Settings access.
+- [x] Lock `Administrator Full Access`; keep Sales Manager and Sales User templates admin-editable.
+- [x] Add module-specific action permission model for Leads, Activities per type, Tasks, CSV Uploads, Automation, and Reports.
+- [x] Add per-activity-type permission UI and backend evaluation, including `001 - Call` special actions.
+- [x] Add per-activity-type field permission UI and evaluation.
+- [x] Enforce hidden/masked field behavior in forms, lists, details, column selectors, filters, exports, and global search.
+- [x] Add partial masking helpers for phone, email, name, and text values.
+- [x] Add lead record visibility scopes and enforce them in list, detail, search, export, dashboard, tasks, activities, and bulk actions.
+- [x] Add `System` non-login owner behavior for newly created/uploaded leads and assignment automation.
+- [x] Ensure assignment targets and assignable records obey the user's visibility scope, with admin full access bypass.
+- [x] Update lead detail UI to remove Overview, Notes, and Custom Fields tabs and move all standard/custom fields into grouped left profile sections.
+- [x] Add lead detail owner-change assignment modal and lead-list bulk owner-change modal using eligible users/System.
+- [x] Store automation/workflow/run metadata in assignment history when System performs automation assignment.
+- [x] Ensure exports and bulk actions only operate on the current filtered/visible/selected rows.
+- [x] Add CSV upload configuration under Settings -> Fields & Disposition with one active mapping, required flags, standard/custom field targets, and duplicate-key composite configuration.
+  - [x] Added backend and Settings UI for required CSV columns and standard-field duplicate composite keys.
+  - [x] Add custom lead fields as duplicate-key targets and upload mapping targets.
+  - [x] Add default mapping persistence UI.
+- [x] Add upload-time auto-map plus per-batch manual mapping adjustments without changing the active default mapping.
+- [x] Block upload when required mapped fields are missing and validate duplicate-key blanks before processing.
+- [x] Apply configurable duplicate detection to CSV uploads and manual lead creation with no bypass.
+  - [x] Enforced configured standard-field duplicate keys for CSV uploads and manual lead create/update.
+  - [x] Extend duplicate detection to configured custom lead fields.
+- [x] Update status/category/disposition change handling to create both lead-detail Activities and Audit entries with old/new values and confirmed message format.
+- [x] Ensure lead-created events create both lead-detail Activities and Audit entries with confirmed message format.
+- [x] Ensure lead field edits outside owner/status/category/disposition create Audit-only entries.
+- [x] Ensure owner assignment/reassignment creates both Audit and Activities entries with confirmed message format.
+- [x] Ensure task created/completed create Activities entries, while task update/reschedule/reassign do not.
+- [x] Ensure CSV upload/import events stay only in Upload History.
+- [x] Ensure automation actions show only in Automation History.
+- [x] Ensure WhatsApp/Voicebot events show in Activities.
+- [x] Ensure telephony calls appear in both Activities and Calls with Calls tab using call-specific details.
+- [x] Add Settings -> Activity Types management with protected system types, auto-generated 3-digit custom codes, editable display name/visibility/permissions, and global/lead-detail visibility controls.
+- [x] Add per-activity-type custom fields and form layout/order configuration.
+- [x] Wire per-activity-type fields into automation trigger/context and create-activity node mapping.
+- [x] Wire activity fields into global Activities and lead detail Activities filters/columns based on selected activity type.
+- [x] Update lead detail Activities to show all visible types by default and use inline expansion for details/audit data.
+- [x] Add inline expanded activity old/new value display with field permission masking/hiding.
+- [x] Add direct recording play button for call activities and keep call metadata in inline expansion.
+- [x] Add editable manually-created non-call activities with audit entries.
+- [x] Add activity type deactivation behavior: hide from creation, keep in filters/history.
+- [x] Add configurable task types and configurable task statuses while keeping priority fixed.
+- [x] Enforce tasks always linked to a lead, mandatory assignee, optional due date, and assignee choices limited by lead visibility.
+- [x] Hide/remove task comments from visible UI and keep remarks/description only.
+- [x] Make completed tasks read-only except reopening/status change and create audit entries for task updates.
+- [x] Ensure task created/completed activity messages use confirmed format, while reopening stays audit only.
+- [x] Move task reminders/notifications out of current required scope.
+- [x] Enforce automation draft/published versioning: activation requires published version, only published versions run.
+- [x] Add publish validation for required node settings.
+- [x] Add draft test-run on selected lead with real changes/calls and `Test Run` log marker.
+- [x] Add manual bulk run on selected leads using current published version and `Manual Run` log marker.
+- [x] Check workflow exit conditions before every node.
+- [x] Add connector/API-node retry count and delay settings; stop run after retries fail.
+- [x] Add failed-run manual retry from failed node.
+- [x] Mask automation API request/response logs and restrict full bodies to Administrator users.
+- [x] Hide Lead Automation History tab unless user has Automation module permission and can view the lead.
+- [x] Add assignment capacity support per user and per rule, active-user-only eligibility, and online/offline-independent assignment.
+- [x] Add global fallback user and rule-level fallback override.
+- [x] Add weighted distribution per assignment rule and configurable round-robin counter reset.
+- [x] Enforce assignment rule ordering with first matching rule wins and manual reorder UI.
+- [x] Allow assignment rules to reassign already-owned leads and assign same owner, but write activity/history only when owner changes.
+- [x] Move saved/scheduled reports out of current required scope.
+- [x] Add report export behavior: immediate for <=10,000 rows, async export job/history for >10,000 rows.
+- [x] Ensure report metrics/cards respect record visibility and field masking.
+- [x] Add report drilldown modals with filtered table, export option, and lead-detail links.
+- [x] Add consistent date range, team, sales group, owner, status/category/disposition filters where relevant across report tabs.
+- [x] Add WhatsApp unknown-number lead creation with System owner, WhatsApp source, phone/name fallback rules, and Activity creation.
+- [x] Ensure WhatsApp chat visibility follows linked lead visibility.
+- [x] Ensure WhatsApp message bodies are not masked in Administrator-only connector logs.
+- [x] Add WhatsApp template configuration with `{{lead.field}}` suggestions and automation variable mapping.
+- [x] Enforce WhatsApp template-first sending plus 24-hour inbound-message service window for free text/media.
+- [x] Add WhatsApp media support for image, document/PDF, audio, and video.
+
+## Phase 3A: Custom Field Management
+
+- [x] Add custom field tables for Users, Leads, and Activities.
+- [x] Add custom field definition APIs for Users, Leads, and Activities.
+- [x] Add custom field value upsert/read APIs for Users, Leads, and Activities.
+- [x] Validate active definitions and required custom fields during custom value upsert.
+- [x] Add default value support.
+- [x] Add validation rule support.
+- [x] Add option/list values for select and multi-select fields.
+- [x] Add display order management UI.
+- [x] Add active/inactive management UI.
+- [x] Add full custom-field edit dialog for label, type, options, defaults, validation, order, mandatory, and active state.
+- [x] Add custom field use in lead create/edit forms.
+- [x] Add custom field use in activity/disposition forms.
+- [x] Add custom field use in user forms.
+- [x] Add custom field permission-template editor integration.
+
+## Phase 4: Lead Module
+
+- [x] Add Lead schema with upload batch, assignment, status, category, disposition, automation status, team, and custom field relationships.
+- [x] Implement lead list API.
+- [x] Implement lead summary API.
+- [x] Implement lead detail API.
+- [x] Implement lead create API.
+- [x] Implement lead update API.
+- [x] Implement lead disposition update API.
+- [x] Implement direct lead assignment API.
+- [x] Normalize lead mobile to 10 digits.
+- [x] Add lead status history during disposition changes.
+- [x] Add lead activity/audit writes for key lead events.
+- [x] Add compact frontend lead list.
+- [x] Add compact frontend lead detail view.
+- [x] Add lead custom fields in read response.
+- [x] Add backend filtering, sorting, and pagination.
+- [x] Add lead global search.
+- [x] Add team/user/permission based lead visibility.
+- [x] Add configurable Lead Status list in settings.
+- [x] Add configurable Lead Category list in settings.
+- [x] Add configurable Lead Disposition list in settings.
+- [x] Add lead-level disposition form definition APIs.
+- [x] Add extra configurable fields on disposition forms.
+- [x] Add full disposition form field edit dialog.
+- [x] Add frontend create/edit lead drawer/dialog.
+- [x] Add frontend lead filters panel.
+- [x] Add frontend lead bulk actions.
+- [x] Add frontend lead audit tab connected to audit API.
+- [x] Add frontend lead activities/tasks/automation tabs connected to APIs.
+- [x] Add lead export API respecting permissions and field masking.
+
+## Phase 5: CSV Lead Upload
+
+- [x] Add upload batch and upload row tables.
+- [x] Add CSV upload API.
+- [x] Validate CSV-only upload.
+- [x] Parse CSV rows.
+- [x] Validate required fields from current confirmed list.
+- [x] Validate mobile as exactly 10 digits.
+- [x] Detect duplicates using mobile and external lead id.
+- [x] Create valid leads from CSV.
+- [x] Store uploaded CSV copy.
+- [x] Store row-level upload statuses.
+- [x] Add upload list/history API.
+- [x] Add upload detail API.
+- [x] Add result CSV download with `upload_status` and `upload_error`.
+- [x] Add frontend CSV Uploads overview table.
+- [x] Add async worker-based CSV processing.
+- [x] Add upload progress status updates.
+- [x] Add branch/team mapping validation.
+- [x] Add upload history under Settings UI.
+- [x] Add uploaded-file download from Settings upload history.
+- [x] Add invalid-row report UI.
+- [x] Add CSV column mapping UI.
+- [x] Add permission checks for upload and download.
+- [blocked] Final lead upload fields/columns and optional-vs-mandatory rules need confirmation.
+
+## Phase 6: Activity Module
+
+- [x] Add Activity schema with metadata and custom field relationship.
+- [x] Add activity list API by lead.
+- [x] Add activity create API.
+- [x] Create system activities from lead, upload, assignment, task, telephony events.
+- [x] Add frontend static activity timeline layout.
+- [x] Connect frontend activity timeline to `/activities`.
+- [x] Add activity edit/delete rules if required.
+- [x] Add status-change activity creation everywhere statuses change.
+- [x] Add WhatsApp activity creation from outbound/inbound messages.
+- [x] Add voicebot activity creation from calls/webhooks.
+- [x] Add document shared activity type.
+- [x] Add activity custom fields into activity create/update forms.
+- [x] Enforce activity mandatory fields.
+- [x] Enforce activity field permissions.
+
+## Phase 7: Task and Follow-Up Module
+
+- [x] Add Task and TaskComment schema.
+- [x] Add task list API by lead.
+- [x] Add task create API.
+- [x] Add task update API.
+- [x] Add task comment API.
+- [x] Create activity when a task is created.
+- [x] Add task list screen.
+- [x] Add task filters.
+- [x] Add task assignment UI.
+- [x] Add task status transition UI.
+- [x] Add missed task calculation.
+- [x] Add task notifications/reminders.
+- [x] Add task permissions.
+- [x] Add task dashboard widgets.
+
+## Phase 8: Audit Logs
+
+- [x] Add AuditLog schema.
+- [x] Add audit log write service.
+- [x] Add audit log list API.
+- [x] Write audit logs for lead create/update/disposition/assignment and upload events.
+- [x] Write audit logs for user, team, permission, connector, automation, task, and activity changes.
+- [x] Mask secrets/tokens in audit old/new values.
+- [x] Add audit filters by module, action, entity, user, and date range.
+- [x] Add audit log frontend view.
+- [x] Add permission enforcement for viewing audit logs.
+- [x] Confirm no audit logging for Admin Operations Center actions.
+
+## Phase 9: MCUBE Connector Foundation
+
+- [x] Add generic connector and connector event tables.
+- [x] Add connector overview API.
+- [x] Add MCUBE telephony connector seed/config.
+- [x] Store raw telephony payloads.
+- [x] Add connector template variable extraction provision.
+- [x] Add provider-specific MCUBE normalization layer.
+- [x] Add signature/secret validation provision for MCUBE webhooks.
+- [x] Add connector request/response log UI.
+- [x] Add retry/failure handling strategy for connector actions.
+- [x] Add masked secret storage pattern for connector credentials.
+- [x] Add connector config audit logs.
+- [~] MCUBE telephony technical decisions are now partially clarified by business rules below; test credentials and any provider-specific payload differences remain blocked until MCUBE shares them.
+
+### Confirmed Telephony Decisions
+
+- [x] Public telephony API base URL is `https://api.unnatify.com`.
+- [x] MCUBE webhook authentication uses header `x-webhook-secret`.
+- [x] MCUBE webhook authentication uses a Telephony connector UI secret instead of an environment variable.
+- [x] Call Route API requires the webhook secret header in production; local development can keep it optional.
+- [x] Call Route API response stays `text/plain` with only the 10-digit agent number or blank response.
+- [x] Call Route API should return the assigned user's 10-digit phone even if the user is offline.
+- [x] Call Route API should return blank when the lead has no assigned user, assigned user has no phone, or lead is not found.
+- [x] Agent Popup and Call Log Complete accept both `application/json` and `application/x-www-form-urlencoded`.
+- [x] Inbound phone mapping: lead phone is `SourceNumber`, agent phone is `DestinationNumber`.
+- [x] Outbound phone mapping: lead phone is `DestinationNumber`, agent phone is `SourceNumber`.
+- [x] User phone numbers must be unique after 10-digit normalization; duplicate agent numbers should be rejected during user create/update.
+- [x] Agent Popup should log and discard when the matched agent has no active browser tab; do not keep offline pending popups.
+- [x] Agent Popup API response remains success for logged/discarded offline cases.
+- [x] Agent Popup API response key should be `CallSessionId`, not `LSQCallSessionId`.
+- [x] Call Log Complete response remains only `Status` and `Message`.
+- [x] Call Log Complete logs calls without creating a lead if no lead is found.
+- [x] Call Log Complete creates a `001 - Call` activity when a lead is found, including call duration and resource/recording URL.
+- [x] MCUBE `Status` is stored as call status; activity disposition remains blank unless MCUBE sends a disposition field.
+- [x] Disposition field variants to support: `Disposition`, `CallDisposition`, `LeadDisposition`, and `disposition`.
+- [x] `ResourceURL` can be stored whether it is absolute or relative.
+- [x] MCUBE will send `ResourceURL` as a full URL for recordings.
+- [x] All telephony phone matching/storage/response uses normalized 10-digit phone numbers only.
+- [x] Click-to-Call provider URL, headers, method, and body remain fully configurable in Settings.
+- [x] Click-to-Call placeholders should use structured `{{...}}` tokens everywhere, with suggestions when typing `{{` or `{{lead.`.
+- [x] `{{user.phone}}` means the logged-in/calling user's 10-digit phone.
+- [x] Click-to-Call should be available from lead detail and lead list row action menu.
+- [x] Lead list `Call` row action means Click-to-Call only.
+- [x] Lead detail top `Call` action means Click-to-Call only.
+- [x] Click-to-Call does not create an activity immediately; call activity is created only from MCUBE Call Log Complete.
+- [x] Click-to-Call provider success shows a success toast and stores request/response in connector logs.
+- [x] Click-to-Call provider failure shows an error toast and stores request/response/error in connector logs.
+- [x] Connector logs are visible only to users with Administrator role.
+- [x] Full connector log request/response bodies are visible only to Administrator users; non-admins should not see connector logs.
+- [x] Telephony connector configuration is editable only through Settings access; Settings module visibility is controlled by permission templates.
+- [x] Lead list row actions should be inside a compact gear/three-dots menu.
+- [x] Telephony popup appears bottom-right by default, can be dragged, opens in all active tabs, closes across tabs, honors configured fields/tabs, and includes Open Lead.
+- [x] Popup tabs configurable options: Overview, Activities, Dispositions, Tasks, Calls, Notes, Custom Fields, Automation History.
+- [x] Popup fields configurable options are only standard lead fields and lead custom fields.
+- [x] Call activity title format: `Inbound call`, `Outbound call`, or `Phone call` for unknown direction.
+- [x] Call activity notes contain only compact summary, no `CallNotes`.
+- [x] Call activity notes format: `Inbound call with Rahul M for 2m 5s`; omit duration when duration is missing or zero.
+- [x] If agent user is not matched, call activity notes use agent phone when present, for example `Inbound call with 8067330904`.
+- [x] Call activity metadata stores `CallSessionId`, `Direction`, `SourceNumber`, `DestinationNumber`, `DisplayNumber`, `StartTime`, `EndTime`, `CallDuration`, `Status`, `ResourceURL`, normalized lead phone, and normalized agent phone.
+- [x] Duplicate Call Log Complete with the same `CallSessionId` updates existing call log and does not create duplicate activity.
+- [x] Duplicate Agent Popup with the same `CallSessionId` updates existing popup event and re-broadcasts to active tabs.
+- [x] Popup close sync should work across all active tabs/devices for the same user through backend delivery state and SSE.
+- [x] Popup drag position should not be remembered; each popup starts bottom-right.
+- [x] Popup size should be fixed compact size; draggable but not resizable.
+- [x] Multiple popups should stack, with max 3 visible and `+N more` beyond that.
+- [x] Popup sound/browser notification is not required now.
+- [x] Popups stay until manually closed; no auto-close.
+- [x] Every telephony webhook call should be visible in connector logs: Call Route, Agent Popup, Call Log Complete, matched lead/user, response returned, and errors.
+- [x] Connector logs mask phone numbers by default; full phone is only shown inside lead/user detail where permitted.
+- [x] Recording play button appears in Activities page and Lead Detail activities/calls areas only for `001 - Call` activities when `ResourceURL` exists.
+- [x] Recording playback uses an inline audio player modal/panel and can fall back to opening the full URL in a new tab if playback fails.
+- [x] Recording playback does not require a separate permission; show the play action whenever the user can see the call activity and `ResourceURL` exists.
+- [x] If the call activity is visible and `ResourceURL` exists, show the play button.
+- [x] Telephony popup visibility does not require permission; any logged-in matched user should receive their popup.
+- [x] Telephony webhooks are provider/system actions protected by `x-webhook-secret`; permission templates do not affect webhook processing.
+- [x] Telephony Settings test tools should cover Lead Route, Agent Popup, Call Log Complete, and Click-to-Call.
+- [x] Click-to-Call test tool supports selected lead, selected user, and optional manual placeholder overrides.
+- [x] Telephony Settings visible sections: Call Route API, Agent Popup API, Call Log API, Click-to-Call, Popup Config, Test Tools, Connector Logs.
+- [x] User-Agent Mapping is not required because MCUBE sends the agent's actual 10-digit phone matching CRM user phone.
+- [x] Hide User-Agent Mapping, Virtual Numbers, Team Assignment, and Call Disposition sections from Telephony settings for now.
+- [x] Telephony connector logs retention is 365 days.
+- [x] Telephony call records retention is 365 days.
+- [x] Manual call records are not allowed.
+- [x] `001 - Call` activities are created only by Telephony Call Log Complete, never manually.
+- [x] Activity type dropdown should hide `001 - Call` from manual creation forms but keep it available in filters/lists.
+
+### Telephony Implementation Tasks From Clarifications
+
+- [x] Update Call Route service to remove online-status dependency and return assigned user phone when available.
+- [x] Enforce unique normalized 10-digit user phone during user create/update.
+- [x] Update Agent Popup response body to use `CallSessionId`.
+- [x] Update Agent Popup offline handling to log then discard instead of storing pending/missed popup for later display.
+- [x] Ensure Agent Popup and Call Log Complete use confirmed inbound/outbound phone mapping.
+- [x] Ensure Call Log Complete creates `001 - Call` activity with duration, status metadata, notes, resource URL, and optional disposition only when supplied.
+- [x] Format call activity title and notes using confirmed compact summary rules.
+- [x] Store confirmed call activity metadata fields without using `CallNotes`; call notes show only the compact summary.
+- [x] Add idempotent duplicate handling for Call Log Complete by `CallSessionId`.
+- [x] Add idempotent duplicate handling for Agent Popup by `CallSessionId` with active-tab re-broadcast.
+- [x] Add/support disposition body variants: `Disposition`, `CallDisposition`, `LeadDisposition`, `disposition`.
+- [x] Replace telephony simple placeholders with structured `{{...}}` placeholders in UI defaults and docs.
+- [x] Add placeholder autocomplete/suggestions for configurable telephony URL/header/body fields.
+- [x] Add Click-to-Call action in lead list row action menu and keep lead detail action.
+- [x] Move lead list row actions into a compact gear/three-dots menu.
+- [x] Verify popup configuration only exposes lead standard/custom fields and the confirmed tab list.
+- [x] Update popup layer to stack up to 3 visible popups, show `+N more`, use fixed compact draggable cards, reset bottom-right each time, and require manual close.
+- [x] Sync popup close across all active tabs/devices for the same user through backend/SSE delivery updates.
+- [x] Mask phone numbers in connector logs while preserving full values in permitted lead/user details.
+- [x] Add Telephony Settings test tools for Lead Route, Agent Popup, Call Log Complete, and Click-to-Call with selected lead/user and manual overrides.
+- [x] Hide User-Agent Mapping, Virtual Numbers, Team Assignment, and Call Disposition from Telephony settings.
+- [x] Ensure visible Telephony Settings sections are only Call Route API, Agent Popup API, Call Log API, Click-to-Call, Popup Config, Test Tools, and Connector Logs.
+- [x] Update telephony connector reference UI/docs with the confirmed response bodies and header-auth instructions.
+- [x] Ensure Click-to-Call success/failure toast behavior and connector logging follow confirmed rules.
+- [x] Restrict connector logs to Administrator users and full request/response body visibility to Administrator users only.
+- [x] Add recording play button for activities and lead detail calls when MCUBE sends a full recording URL.
+- [x] Ensure `001 - Call` is hidden from manual creation forms but still available in filters/lists.
+- [x] Remove/disable manual call record creation; only Telephony Call Log Complete can create call activities.
+- [x] Remove separate `play recording` permission requirement; recording controls follow call activity visibility only.
+
+## Phase 10: WhatsApp Module
+
+- [x] Add WhatsApp connector, number, template, template variable, conversation, message, and quick reply tables.
+- [x] Add WhatsApp connector create API.
+- [x] Add WhatsApp template create API.
+- [x] Extract WhatsApp template variables.
+- [x] Add frontend placeholder section for WhatsApp Converse.
+- [x] Add WhatsApp connector update/delete/list-detail APIs.
+- [x] Add WhatsApp connector and template create/edit dialogs in Settings.
+- [x] Add WhatsApp business number management APIs.
+- [x] Add template status management APIs.
+- [x] Add template variable mapping UI.
+- [x] Add template media/header/document configuration.
+- [x] Add WhatsApp automation node backend configuration.
+- [x] Add outbound WhatsApp send worker job.
+- [x] Store outbound request/response logs.
+- [x] Store raw provider responses.
+- [x] Add message status webhook ingestion.
+- [x] Add inbound reply webhook ingestion.
+- [x] Add message status normalization.
+- [x] Create/update lead-linked WhatsApp activities.
+- [x] Add conversation inbox/recent contacts API.
+- [x] Make WhatsApp inbox/recent contacts user-specific.
+- [x] Add lead-detail WhatsApp chat entry.
+- [x] Add Converse-like counsellor chat UI.
+- [x] Add right-bottom floating WhatsApp chat launcher.
+- [x] Add free-text send inside active service window.
+- [x] Add approved-template send outside service window.
+- [x] Add quick replies UI.
+- [x] Add supported media send/receive provision.
+- [x] Add opt-in/opt-out field handling.
+- [x] Add configurable unknown-number handling for inbound WhatsApp messages.
+- [x] Add configurable WhatsApp reply notification routing: lead owner, last sender, team, or none.
+- [x] Add real-time inbound message notifications.
+- [x] Add message status indicators in WhatsApp chat UI.
+- [x] Apply permission-template masking to sensitive lead fields in WhatsApp chat.
+- [x] Add WhatsApp reports.
+- [blocked] MCUBE WhatsApp send/template API details.
+- [blocked] MCUBE WhatsApp status/reply webhook payload samples and final status mapping.
+
+## Phase 11: Voicebot Module
+
+- [x] Add voicebot connector, trigger template, trigger variable, webhook mapping, and call tables.
+- [x] Add voicebot connector create API.
+- [x] Add voicebot trigger template create API.
+- [x] Extract trigger body variables.
+- [x] Add voicebot webhook mapping create API.
+- [x] Add frontend placeholder section for Voicebot Connector.
+- [x] Add voicebot connector update/delete/list-detail APIs.
+- [x] Add voicebot connector and trigger create/edit dialogs in Settings.
+- [x] Add Postman-like trigger configuration UI.
+- [x] Add variable mapping UI for automation nodes.
+- [x] Generate per-connector webhook URL.
+- [x] Add sample webhook body paste/parser UI.
+- [x] Add webhook ingestion endpoint for voicebot results.
+- [x] Map webhook sample fields to standard voicebot call/activity fields.
+- [x] Map webhook sample fields to activity custom fields.
+- [x] Store voicebot call records from webhooks.
+- [x] Store voicebot recording URL, transcript, summary, intent, disposition, duration, timestamps, and raw payload.
+- [x] Create lead timeline activity from voicebot result.
+- [x] Ensure unmatched Voicebot webhook events are stored in connector/voicebot logs without creating a lead.
+- [x] Verify matched Voicebot webhook results create lead Activities entries.
+- [x] Ensure Voicebot activity type visibility defaults to both global Activities and lead detail Activities.
+- [x] Ensure Voicebot webhook ingestion does not directly mutate lead disposition/status/category.
+- [x] Ensure automation can react to Voicebot outcomes and update leads when configured.
+- [x] Use fixed Voicebot activity title `Voicebot call` while storing provider details separately.
+- [x] Store Voicebot recording URL when webhook recording URL exists, but keep playback hidden because recording playback is call-only.
+- [x] Reuse call-only recording visibility rules consistently.
+- [x] Show Voicebot transcript and summary in expanded activity details when available.
+- [x] Apply activity field permission/masking rules to Voicebot transcript and summary fields.
+- [x] Make Voicebot automation triggers use configured conditions against mapped webhook fields.
+- [x] Make Voicebot lead matching configurable from connector mapping fields instead of hardcoded matching order.
+- [x] Handle multiple Voicebot lead matches deterministically and log ambiguity.
+- [x] Resolve multiple Voicebot matches by most recently updated lead.
+- [x] Enforce global Administrator-only visibility for all connector/raw/system/technical logs.
+- [x] Add test call option.
+- [x] Add voicebot automation node execution worker.
+- [x] Add voicebot reports.
+- [blocked] MCUBE voicebot trigger API details.
+- [blocked] MCUBE voicebot result webhook payloads and final disposition mapping.
+
+## Phase 12: Telephony Module
+
+- [x] Add telephony call, route request, agent popup event, and call log event tables.
+- [x] Add clean inbound call route webhook: `GET /webhooks/telephony/lead-route`.
+- [x] Return text/plain 10-digit agent number or blank response.
+- [x] Log route requests.
+- [x] Add agent popup webhook: `POST /webhooks/telephony/agent-popup`.
+- [x] Add call log complete webhook: `POST /webhooks/telephony/call-log-complete`.
+- [x] Store raw popup and call log payloads.
+- [x] Normalize telephony phones to 10 digits.
+- [x] Create telephony call records.
+- [x] Create lead call activities from call logs.
+- [x] Add Telephony connector reference/config API.
+- [x] Add Telephony variable preview API.
+- [x] Add compact Telephony connector UI with webhook URLs, methods, sample bodies, sample responses, and click-to-call config.
+- [x] Tolerate `application/x-www-form-urlencoded` end-to-end in tests for popup and call log.
+- [x] Implement click-to-call execution API.
+- [x] Implement mail-merge resolver for click-to-call from lead/user standard and custom fields.
+- [x] Enforce 10-digit output for structured `{{user.phone}}` and `{{lead.mobile}}` placeholders.
+- [x] Add click-to-call request/response logs.
+- [x] Add click-to-call test call action in UI.
+- [x] Add lead-detail call button wired to click-to-call using logged-in user's 10-digit phone.
+- [x] Add agent/user mapping configuration UI.
+- [x] Add online-agent detection.
+- [x] Add realtime agent popup delivery to browser sessions.
+- [x] Add popup display UI.
+- [x] Add cross-tab popup close synchronization.
+- [x] Add missed/recent call notification UI for offline agents.
+- [x] Add telephony report.
+- [blocked] Final URL paths/security validation and MCUBE auth details.
+
+## Phase 13: Assignment Engine
+
+- [x] Add assignment rules, conditions, actions, runs, and run logs tables.
+- [x] Add assignment engine run API.
+- [x] Add assignment run list API.
+- [x] Support rule priority/order.
+- [x] Support lead standard fields.
+- [x] Support lead custom fields.
+- [x] Support activity/context fields where passed.
+- [x] Support actions: assign user, assign team, assign team by branch, round-robin team.
+- [x] Store run logs and selected winner explanation.
+- [x] Create assignment records, activities, and audit logs.
+- [x] Allow assignment engine to run manually or from automation context.
+- [x] Add assignment rule CRUD APIs.
+- [x] Add assignment condition/action editor UI.
+- [x] Add assignment preview/testing UI.
+- [x] Add rule versioning/audit.
+- [x] Add capacity-based assignment.
+- [x] Add location/product/language helper builders.
+- [x] Add user custom field conditions.
+- [x] Add reassignment rule behaviors.
+- [x] Add fallback handling configuration.
+- [x] Add assignment report UI.
+
+## Phase 14: Automation Engine
+
+- [x] Add automation workflow, version, run, run step, scheduled job, exit condition, and API call log tables.
+- [x] Add automation overview API.
+- [x] Add workflow CRUD foundation.
+- [x] Add workflow definition save/publish foundation.
+- [x] Add node upsert API.
+- [x] Add edge upsert API.
+- [x] Add node clone API.
+- [x] Add node delete API.
+- [x] Add edge delete API.
+- [x] Add automation run detail API.
+- [x] Add seeded run for report detail smoke testing.
+- [x] Add frontend static workflow builder view.
+- [x] Build React Flow-style automation canvas.
+- [x] Add plus-button node insertion UI.
+- [x] Add node configuration side panel/modal.
+- [x] Add trigger node configuration.
+- [x] Add if/else node configuration.
+- [x] Add multi-condition AND/OR groups.
+- [x] Add delay node configuration.
+- [x] Add assignment node configuration.
+- [x] Add WhatsApp template node configuration.
+- [x] Add voicebot trigger node configuration.
+- [x] Add task creation node configuration.
+- [x] Add lead update node configuration.
+- [x] Add create-activity node configuration.
+- [x] Add mark-expired node configuration.
+- [x] Add notify user/team node configuration.
+- [x] Add explicit stop/pause/resume action node configuration.
+- [x] Add external API call node configuration.
+- [x] Add workflow-level exit condition settings.
+- [x] Add automation publish/activate/pause/resume controls.
+- [x] Add trigger configuration for WhatsApp status changed, WhatsApp reply received, voicebot disposition received, call log received, task completed, and offer expiry reached.
+- [x] Implement worker automation execution engine.
+- [x] Implement delayed automation scheduling.
+- [x] Implement stop/pause/resume conditions.
+- [x] Implement pause condition for active human WhatsApp conversation.
+- [x] Implement stop conditions for opt-out, wrong number, and maximum attempts.
+- [x] Implement retry attempts and failure handling.
+- [x] Ensure demo/seed automation data is local-only and no default production workflow is auto-created.
+- [x] Implement API-call node execution with HTTPS-only validation.
+- [x] Enforce Administrator-only create/edit access for API-call automation nodes.
+- [x] Block localhost/private IP API-call URLs.
+- [x] Add timeout/retry limits for API call nodes.
+- [x] Mask secrets/tokens in API node UI and logs.
+- [x] Audit API-call node configuration changes.
+- [x] Add automation request/response logs.
+- [x] Add Lead Automation Report list UI.
+- [x] Add automation run drill-down UI with completed/pending/failed/skipped steps.
+- [x] Add automation execution metrics on dashboards.
+
+## Phase 15: Reports and Dashboards
+
+- [x] Add reports overview endpoint.
+- [x] Add dashboard frontend shell with metrics.
+- [x] Add automation run summary cards.
+- [x] Add lead summary metrics.
+- [x] Administrator dashboard with real role-aware data.
+- [x] Sales Manager dashboard with team-scoped data.
+- [x] Sales User dashboard with assigned-lead data.
+- [x] Lead upload report.
+- [x] Invalid lead report.
+- [x] Team-wise distribution report.
+- [x] WhatsApp message report.
+- [x] WhatsApp response report.
+- [x] Voicebot call report.
+- [x] Voicebot intent report.
+- [x] Telephony report.
+- [x] Assignment report.
+- [x] Conversion report.
+- [x] Expired leads report.
+- [x] Full customer journey report.
+- [x] Lead automation report with run drill-down.
+- [x] Export reports respecting permission templates and field masking.
+- [x] Store generated report file metadata when reports are exported.
+- [x] Add generated report download history with permission checks.
+
+## Phase 16: Admin Operations Center
+
+- [x] Create separate Ops user model/table or secure credential store.
+- [x] Add `/ops-login` backend-controlled login.
+- [x] Keep Ops disabled unless at least one ops user exists.
+- [x] Ensure Ops is not visible to normal Administrator users.
+- [x] Add health page.
+- [x] Add logs viewer with redaction and whitelisted files only.
+- [x] Add file viewer with strict allowed directories.
+- [x] Add read-only database viewer.
+- [x] Add whitelisted table list for DB viewer.
+- [x] Block arbitrary SQL editor.
+- [x] Add queue viewer.
+- [x] Protect queue dashboard from public access.
+- [x] Do not audit Ops actions unless requirement changes.
+- [x] Add frontend Ops login and Ops shell.
+
+## Frontend Cross-Cutting Tasks
+
+- [x] Create compact CRM shell with sidebar and top bar.
+- [x] Use reference app only for design language, not architecture.
+- [x] Add compact Leads, Lead Detail, Uploads, Automation, Connectors, Users, Reports, and Settings views.
+- [x] Reduce UI density compared to earlier draft.
+- [x] No dark mode toggle for now.
+- [x] UI palette should use full green ramp `--g50` through `--g900`, with `#162716` sidebar, `#2d6a2d` primary/active, `#eef7ee` tinted backgrounds, and `#e0ede0` green-tinted borders.
+- [x] Main sidebar is expanded by default with icon + label; collapse is optional/user-triggered only.
+- [x] On mobile/tablet, the main sidebar becomes a drawer opened by a menu button.
+- [x] Use full-width large modals for complex forms and compact modals for simple create/edit forms.
+- [x] For small unclear UX/detail decisions, use reasonable CRM defaults during implementation; ask only for data, security, permission, integration, or user-visible workflow-impacting choices.
+- [x] Normalize frontend theme tokens to the confirmed green ramp and remove inconsistent blue/neutral styling.
+- [x] Ensure responsive shell uses drawer navigation on mobile/tablet.
+- [x] Replace remaining static placeholder data with API data.
+- [x] Add loading, empty, error, and permission-denied states.
+- [x] Add responsive behavior checks for desktop and mobile.
+- [x] Add dense table pagination.
+- [x] Add reusable form drawer/dialog patterns.
+- [x] Add toast/notification system.
+- [x] Add client-side route structure instead of single-page view switcher when ready.
+- [x] Add `/dashboard` route.
+- [x] Add `/leads` route.
+- [x] Add `/leads/[id]` route.
+- [x] Add `/uploads` route.
+- [x] Add `/automation` route.
+- [x] Add `/connectors` route.
+- [x] Add `/users` route.
+- [x] Add `/reports` route.
+- [x] Add `/settings` route.
+- [x] Add frontend auth flow and protected layout.
+- [x] Add visual checks/screenshots before UI milestones.
+- [x] Add performance checks for common pages: initial load, dense tables, and large lists.
+
+## Backend Cross-Cutting Tasks
+
+- [x] Add modular NestJS structure.
+- [x] Add Prisma service.
+- [x] Add ConfigModule baseline.
+- [x] Add auth guards and current user injection.
+- [x] Replace temporary `actor = system` usage with authenticated actor.
+- [x] Attribute automation, worker, integration, and scheduled-job changes to seeded System user.
+- [x] Add DTO validation coverage for every write endpoint.
+- [x] Add pagination helper.
+- [x] Add filtering/search helper.
+- [x] Add consistent API response/error shape.
+- [x] Add rate limiting for auth and webhook endpoints.
+- [x] Add webhook secret/signature validation framework.
+- [x] Add background job enqueue APIs for long-running work.
+- [x] Add integration tests for critical APIs.
+- [x] Add test database setup.
+
+## Worker and Queue Tasks
+
+- [x] Worker package scaffold exists.
+- [x] Configure BullMQ queues.
+- [x] Add CSV processing worker.
+- [x] Add WhatsApp send worker.
+- [x] Add WhatsApp status/reply processing worker.
+- [x] Add voicebot trigger worker.
+- [x] Add voicebot webhook processing worker.
+- [x] Add telephony webhook processing worker if provider load requires async handling.
+- [x] Add automation execution worker.
+- [x] Add delayed automation scheduler.
+- [x] Add offer expiry checker.
+- [x] Add assignment worker integration.
+- [x] Add retry policies and dead-letter handling.
+- [x] Add queue health/metrics logging.
+- [x] Add BullMQ concurrency settings per queue.
+
+## Database, Migration, and Seed Tasks
+
+- [x] Add Prisma schema with core tables.
+- [x] Add initial migration.
+- [x] Add seed script.
+- [x] Seed sample CRM data for local UI.
+- [x] Add `uploaded_files` model/API usage for uploaded CSVs, shared documents, temporary files, and generated reports.
+- [x] Add permission-restricted file download API for uploaded and generated files.
+- [x] Add cleanup policy for temporary files.
+- [x] Add migrations for any schema changes after initial prototype.
+- [x] Add seed data for app settings/status/category/disposition lists.
+- [x] Add indexes for high-traffic filters/searches after query review.
+- [x] Verify common list APIs do not perform unbounded SELECT queries.
+- [x] Add backup/restore drill notes to runbook after schema stabilizes.
+- [x] Add production migration checklist.
+- [x] Validate no destructive migrations before go-live.
+
+## Deployment and Go-Live Tasks
+
+- [x] Create VPS-to-Go-Live runbook.
+- [x] Include Docker Compose production reference.
+- [x] Include Dockerfiles.
+- [x] Include Nginx, SSL, backup, restore, firewall, and health-check guidance.
+- [x] Update runbook after final service names, ports, and env vars are stable.
+- [x] Add production `.env.example` with all required variables.
+- [x] Add Nginx config for `app.unnatify.com` and `api.unnatify.com`.
+- [x] Verify Nginx `client_max_body_size` is set for CSV uploads.
+- [x] Verify Nginx webhook proxy timeout settings for MCUBE callbacks.
+- [x] Add SSL issuance steps with final domain verification.
+- [x] Add deployment smoke-test checklist.
+- [x] Add smoke check confirming frontend/backend ports are bound locally only.
+- [x] Add safe database access checklist: container `psql`, optional admin-only pgAdmin, and no public `5432`.
+- [x] Add off-server backup procedure before real production data.
+- [x] Add restore drill procedure and monthly restore test reminder.
+- [x] Add worker/queue verification steps after workers are real.
+- [x] Add release tagging/source-control checklist before go-live.
+- [x] Add rollback checklist for failed production deployment.
+- [x] Add swap verification/configuration to deployment execution checklist.
+- [x] Add Redis memory cap and BullMQ concurrency verification to go-live smoke checks.
+
+## Documentation Reconciliation Tasks
+
+- [x] Review root `.md` and `.txt` files against this tracker.
+- [x] Reconcile tracker status conflicts where a cross-cutting task is marked done in one phase but still pending in another.
+
+## Reference-Driven Frontend Refactor Tasks
+
+- [x] Compare the shared reference repo against the current CRM app and document differences.
+- [x] Start extracting reusable UI primitives with a shared compact table component.
+- [x] Remove the quick-view icon action from compact tables while keeping lead-name navigation.
+- [x] Add route-backed Settings pages for users, connectors, fields, lists, uploads, and security.
+- [x] Keep Settings as the home for admin/configuration modules.
+- [x] Convert activity type routing/filtering to stable 3-digit codes.
+- [x] Add migration to convert existing activity records from legacy text types to 3-digit codes.
+- [x] Add migration to convert existing telephony-created activity records to 3-digit codes.
+- [x] Update backend activity writers to store 3-digit activity type codes.
+- [x] Show activity code + readable label in activity UI.
+- [x] Continue splitting the monolithic frontend into route-level pages.
+- [x] Extract reusable form, modal, settings, skeleton, action toolbar, filter modal, and empty/error components.
+- [x] Build a production-grade reusable list component with consistent field selectors, pagination, bulk actions, loading, empty, and error states.
+- [x] Rework Lead Detail using the reference layout idea while keeping only required Unnatify tabs.
+- [x] Add modal-based advanced filters where useful; lead list saved views are required now.
+- [x] Add lead list saved views for filters, visible columns, sort, and density.
+- [x] Keep lead list saved views private per user.
+- [x] Add per-user default saved view support for Leads page.
+- [x] Ensure lead saved views do not persist selected rows or bulk selection state.
+- [x] Remove or hide all remaining opportunity/list/form concepts that are not required by Unnatify.
+
+## Current Frontend Architecture Hardening
+
+- [x] Add shared frontend API helper with consistent `response.ok` handling.
+- [x] Add shared dynamic field metadata helpers for type-aware filter operators and custom-field options.
+- [x] Remove production fallback/demo lead, upload, and automation data from workspace loading.
+- [x] Make lead advanced filters support `match all` and `match any` condition groups.
+- [x] Make lead advanced filter operators depend on field data type.
+- [x] Make lead quick filters use configurable lead status/category values and dynamic branch values.
+- [x] Include active custom fields in lead list field selector and advanced filters.
+- [x] Add table search for uploads, activities, and tasks.
+- [x] Use stable row IDs in compact table rendering.
+- [x] Show lead/user names instead of IDs in task list actions where lookup data is available.
+- [x] Let lead detail routes resolve database IDs and external Lead IDs.
+- [x] Update backend advanced lead filters to support OR groups and numeric fields.
+- [x] Update backend lead status-change activities to store 3-digit activity type codes.
+- [x] Fully split `crm-app.tsx` out of `src/app` into route-owned CRM feature routing.
+- [x] Move auth/session handling into a shared frontend auth module.
+- [x] Replace remaining direct `fetch` calls with the shared API helper.
+- [x] Build a typed generic CRM table component with column metadata, custom-field metadata, row actions, server pagination, and filter slots.
+- [x] Move Settings from internal tab state to a real settings layout with child route state.
+- [x] Add route-level `loading.tsx` and `error.tsx` for all major app routes.
+- [x] Add subtle shared motion tokens for page transitions, modals, drawers, table rows, and skeletons.
+- [x] Remove the initial "Opening Unnatify" auth loader flash.
+- [x] Make workspace boot loading route-aware so pages fetch only the data they need.
+- [x] Initialize sidebar collapsed state from local storage without a second render layout shift.
+- [x] Improve Settings with route context, section summary, compact status chips, and cleaner layout density.
+- [x] Improve Automation with compact metrics, a clearer workflow canvas, node palette, and sticky node inspector.
+- [x] Extract Automation into a dedicated feature view component instead of keeping it inside the CRM shell file.
+- [x] Extract Dashboard and reusable lead-row rendering into a dedicated feature view component.
+- [x] Extract Activities into a dedicated route/list feature view component.
+- [x] Extract CSV Uploads into a dedicated feature view component.
+- [x] Extract Tasks into a dedicated feature view component.
+- [x] Extract Reports into a dedicated feature view component.
+- [x] Extract the Settings layout/header/sidebar frame into a dedicated component.
+- [x] Extract Connectors into a dedicated feature view component.
+- [x] Extract Users & Access into a dedicated feature view component.
+- [x] Extract telephony popup polling/presentation into a dedicated CRM component.
+- [x] Extract lead detail profile/property/activity presentation into dedicated CRM components.
+- [x] Extract the full Lead Detail route view into a dedicated feature view component.
+- [x] Extract the full Leads list/create/filter route view into a dedicated feature view component.
+- [x] Extract the Settings route view into a dedicated feature view component.
+- [x] Extract the MCUBE telephony connector panel from the general Connectors view.
+- [x] Move toast provider/useToast into a shared frontend component.
+- [x] Replace heavy sidebar module icons with cleaner outline-style icons.
+- [x] Scope Settings API loading to the active settings route so inactive configuration sections do not load unnecessarily.
+- [x] Scope connector overview loading to non-telephony connector tabs.
+- [x] Verify frontend raw API calls are centralized in the shared API helper.
+
+## Expanded Reference UI Refactor Rollout
+
+- [x] Keep Unnatify domain logic while applying only reference UI/structure patterns.
+- [x] Add shared `AppChip`, `AppButton`, `PageHeader`, `TableToolbar`, `SectionCard`, `FormDialog`, and `ConfirmDialog` primitives.
+- [x] Make shared `AppChip` span-based so chips can be safely rendered inside text/property rows without hydration errors.
+- [x] Route all module headers through the shared `PageHeader` via `ModuleShell`.
+- [x] Replace local chip implementations in CRM views with shared `AppChip`.
+- [x] Move local table markup implementations to the shared compact table renderer.
+- [x] Split lead detail tab bodies into separate tab components.
+- [x] Replace remaining local `DataTable` wrapper functions with direct `CrmDataTable`/`CompactDataTable` usage at call sites.
+- [x] Split `LeadsView` into create panel, filters, advanced filters, table, and column metadata files.
+- [x] Split `SettingsView` into route-section components.
+- [x] Split `UsersView` into users, teams, sales groups, and permissions tab components.
+- [x] Split telephony connector into endpoint cards, click-to-call config, and agent-popup config components.
+- [x] Split automation into list/editor-oriented components: metrics, editor shell, canvas, node palette, node inspector, assignment engine panel, and run history are extracted.
+- [x] Move page-specific columns into metadata files where useful: leads, activities, tasks, and uploads now use separate column/field metadata files.
+- [x] Standardize top table controls in order: search, quick filters, advanced filter, columns, density/export where relevant; Leads, Activities, Tasks, and Uploads now follow the shared toolbar/filter direction.
+- [x] Add shared advanced filter builder across list pages where useful; Leads, Activities, and Tasks use type-aware operators.
+- [x] Convert create/edit inline settings forms to compact dialogs; users, teams, sales groups, permission templates, custom fields, disposition fields, and CSV upload now use dialogs.
+- [x] Add generic API connector create/edit/delete UI and backend CRUD routes.
+- [x] Ensure each generic API connector record represents exactly one API action/endpoint.
+- [x] Add rich `{{...}}` suggestions for lead/user/activity fields and custom fields in API connector URL/header/body editors.
+- [x] Make API connector automation node mapping UI show only variables used by the selected connector template.
+- [x] Mark API connector calls as `completed_with_warning` when HTTP succeeds but configured response keyword is missing.
+- [x] Improve permission template UI into left module list plus right permissions/field matrix.
+
+## Backend to Frontend Parity Gaps
+
+- [x] Wire automation workflow list/editor to backend workflow create, definition save, publish, run, enqueue, and run-detail APIs.
+- [x] Add assignment rule edit/delete UI.
+- [x] Add assignment manual run UI.
+- [x] Add assignment run history UI.
+- [x] Add direct lead assignment modal from lead list and lead detail.
+- [x] Remove task comments from visible UI and keep remarks/description only.
+- [x] Add activity edit/delete UI with custom fields and permission-aware actions.
+- [x] Add WhatsApp business number management UI.
+- [x] Connect WhatsApp counsellor chat send action to `/connectors/whatsapp/messages`.
+- [x] Add voicebot trigger test-call UI.
+- [x] Add voicebot webhook sample mapping UI backed by `/connectors/voicebot/webhook-mappings`.
+- [x] Add connector variable extraction preview/mapping UI backed by `/connectors/extract-variables`.
+- [x] Add password reset request and confirmation UI.
+- [x] Improve Admin Operations Center with `/ops/files` file viewer and DB table selector.
+- [x] Decide whether generic `/files` module needs CRM-visible UI for shared documents/attachments. Decision: keep it out of the visible CRM for now; use CSV upload history and Ops file viewer until a document/attachment requirement is confirmed.
+
+## Fresh Parity Recheck: Open / Partial Items
+
+- [x] Replace worker placeholder handlers for WhatsApp send/status, voicebot trigger/webhook, telephony webhook, assignment run, connector retry, and offer-expiry queues with real processing.
+- [x] Replace static Automation node inspector fields with real node-specific configuration forms.
+- [x] Implement real Automation worker execution for assignment, WhatsApp, voicebot, task creation, lead update, and connector API nodes.
+- [x] Add structured If/Else multi-branch condition builder and structured exit-condition editor. Current state: node inspector now supports structured all/any condition groups, structured stop statuses/dispositions/max attempts, saved workflow definitions carry the structured exit config, and queued worker runs evaluate both conditions and exit config.
+- [x] Decide whether Automation node/edge actions should persist individually through node/edge endpoints or remain full-definition save only, then align UI/tracker wording. Decision: keep full-definition save as the persistence model for now.
+- [x] Complete WhatsApp number edit/delete or deactivate; current number management is create-only.
+- [x] Make WhatsApp number `upsert` actually upsert by connector/phone, or rename it to create-only.
+- [x] Add WhatsApp template delete/deactivate and expose media/header/document config fields in UI.
+- [x] Add dropdown-based WhatsApp template variable mapping to lead/user/activity/custom fields.
+- [x] Complete lead-context WhatsApp chat placement if the chat should be available outside connector settings.
+- [x] Add voicebot trigger template update/delete backend APIs and frontend edit/delete actions.
+- [x] Add voicebot webhook mapping update/delete backend APIs and frontend edit/delete actions.
+- [x] Add guided voicebot sample-body-to-activity-field mapper.
+- [x] Add report export-history download action using the files download endpoint.
+- [x] Enrich reports and connector logs to show lead/workflow/rule/user/connector names instead of IDs where possible.
+- [x] Add consistent report filters for date range, team, status, and connector.
+- [x] Add useful bulk actions for leads and tasks first; add uploads/reports bulk actions only where needed.
+- [x] Wire Lead Detail activity tab filter controls or remove them until implemented.
+- [x] Continue Settings UI polish so each route follows the reference-style pattern: focused content card, top-right create/save action where the route has a create flow, table/empty state, and create/edit dialog for mutable records.
+
+## Deep Audit Remediation: Frontend, Backend, Workers, UI, and Logic
+
+- [x] Make queued worker automation graph-aware so If/Else nodes route to true/false/else edges instead of running every node linearly.
+- [x] Align direct backend automation runs with queued worker execution, including graph traversal and non-placeholder handling for supported node types. Current state: direct runs now follow graph edges and evaluate If/Else conditions; queued worker execution remains the recommended path for connector-heavy nodes.
+- [x] Add worker API-call node safety parity with backend: public HTTPS validation, private-network blocking, timeout, retries, configured headers, and consistent request/response logging.
+- [x] Add backend support for all frontend advanced custom-field filter operators: contains, starts with, ends with, equals, not equals, in, not in, empty, not empty, number/date-compatible comparisons where stored values allow it.
+- [x] Connect CSV upload required-column validation to configurable mandatory-field rules where the mandatory rule maps to a supported upload column.
+- [x] Keep upload worker validation in sync with backend upload validation.
+- [x] Make telephony online-agent and popup delivery state production-safe for multi-backend deployments through Redis-backed presence/pub-sub or a documented single-replica/sticky-session constraint.
+- [x] Replace telephony SSE query-token transport with a safer short-lived stream-token or cookie-backed approach.
+- [x] Continue reducing shared `CrmApp` route data loading so route views own page-specific data and avoid unnecessary API calls. Current state: Dashboard, CSV Uploads, and Automation overview/run-history now load inside their route views instead of the shared CRM shell.
+- [x] Fix mandatory-rule field selection so the UI loads field options for the selected mandatory-rule module, not only the currently selected custom-field module.
+- [x] Use configurable dropdown values for activity disposition editing instead of free-text input.
+- [x] Add deeper smoke/integration coverage for CSV worker import, automation branching, API-call node safety, telephony SSE popup delivery, and frontend route behavior. Current state: added a focused deep-remediation smoke script for stream token, custom-field filter, automation list, and worker health; lower-level branch/API-node tests can be expanded later.
+- [x] Harden production auth defaults: fail fast when production JWT secret is missing and move browser token storage toward a safer cookie/session model. Current state: production JWT secret is required, auth now supports httpOnly access/refresh cookies with bearer-token fallback, refresh tokens are no longer stored in browser storage, and telephony stream uses a short-lived stream token.
+- [x] Refresh stale audit/comparison docs so they match the current app behavior and remaining gaps.
+
+## Enterprise SaaS Readiness: Open Hardening Tasks
+
+Source audit: `Enterprise-SaaS-Gap-Audit.md`.
+
+- [x] Replace settings/access role-name checks with permission-template checks while keeping the backend-only Ops login separate.
+- [x] Align backend direct automation runs with worker execution so unsupported nodes fail or are explicitly skipped instead of returning placeholder success.
+- [x] Mark WhatsApp and voicebot connector execution as `not_configured` or `dry_run` until MCUBE provider details are available; avoid false `sent` or `success` states.
+- [blocked] Implement real MCUBE WhatsApp/voicebot provider execution once API base URL, auth, payloads, status mappings, and test credentials are shared.
+- [x] Update queued CSV upload preflight to use configurable mandatory-field rules before accepting a file into the queue.
+- [x] Optimize large CSV imports by preloading existing leads, branch/team mappings, and validation context instead of repeated row-level lookups.
+- [x] Add backend CSV file-size, row-count, date-format, duplicate, and idempotent retry safeguards.
+- [x] Replace in-memory rate limiting with Redis-backed rate limiting suitable for multiple backend replicas.
+- [x] Use timing-safe comparison for webhook secrets and connector callback secrets.
+- [x] Add CSRF protection for cookie-authenticated mutating requests.
+- [x] Lock production CORS to configured origins and add security headers/CSP.
+- [x] Add refresh-token rotation and reuse detection policy.
+- [x] Add account lockout, password policy enforcement, suspicious-login audit events, and password-reset audit coverage.
+- [x] Audit permission template changes, field permission changes, connector config changes, security/2FA changes, export downloads, failed login attempts, and bulk operations with sensitive value masking.
+- [x] Harden Dockerfiles with `npm ci`, production-only runtime dependencies, non-root users, app healthchecks, and explicit `NODE_ENV=production`.
+- [x] Add compose/runtime resource limits, app healthchecks, and a clear migration/rollback strategy.
+- [x] Add request correlation IDs and propagate them through API requests, audit logs, worker jobs, connector events, automation runs, and telephony streams.
+- [x] Replace worker console logging with structured redacted logging.
+- [x] Add metrics/alerts for API latency, queue depth, job failures, upload processing, automation steps, connector failures, telephony streams, Postgres, Redis, and disk usage.
+- [x] Align worker assignment jobs with backend assignment behavior, including fallback, global fallback, capacity, weighting, and custom-field based rules. Current state: worker assignment logic was extracted from `workers/src/index.ts` into `workers/src/assignment-runner.ts`; backend rule helpers live in `backend/src/assignment/assignment-utils.ts`.
+- [x] Reduce large backend service maintainability risks by extracting pure helpers from telephony, connectors, and automation services. Current state: telephony helper/sample/template logic lives in `backend/src/telephony/telephony.utils.ts`, connector mapping/variable/status helpers live in `backend/src/connectors/connectors-utils.ts`, and automation workflow graph/validation/template helpers live in `backend/src/automation/automation-utils.ts`.
+- [x] Add custom-field lifecycle protections: dependency checks, type/options change impact warnings, definition history, and role/team mandatory previews.
+- [x] Remove hidden frontend list-value fallbacks from production flows or label them clearly as seed defaults with loading/error states.
+- [x] Expand reports with saved reports, scheduled reports, async export status, report-level field permissions, and metric drilldowns. Current state: backend report saved views/schedules/export status/drilldown endpoints are wired, report exports honor field permissions, and Reports UI exposes save/schedule/export history/drilldown flows.
+- [x] Strengthen telephony popup delivery with per-user acknowledgement/read state, multi-session presence, permission-aware popup fields, and stream monitoring. Current state: popup events now store agent/user delivery state, SSE delivery marks events as delivered, frontend marks seen/closed, and stale active popups are excluded.
+- [x] Continue reducing `CrmApp` until it is only an authenticated shell/session coordinator and each route owns its own data loading. Current state: Dashboard, Leads, Lead Detail, Uploads, Automation, Settings access, and Users access now load inside their route views; `CrmApp` only coordinates auth/session, route selection, shell navigation, and the popup layer.
+- [x] Split remaining large frontend views further: `ConnectorsView`, `SettingsView`, `ReportsView`, and inline lead-detail create sections. Current state: connector tabs are split into Telephony, API Call, WhatsApp, Voicebot, and Logs panels; Reports is split into filters, metrics, tab sections, saved/scheduled, and audit components; Settings shared types/utilities are extracted; Lead Detail now has shared typed tab models and activity/task creation moved into dialogs; Settings fields now uses focused sub-section tabs and upload issue rows moved into a dialog.
+- [x] Finish reference-style Settings pages: left nav, focused content panel, top-right create/save action, table or empty state, and create/edit dialogs for every mutable record. Current state: Settings has route-backed left navigation, focused route panels, dialog-based mutation for mutable fields/rules/uploads, and section-level add/save actions.
+- [x] Replace remaining collapsible/inline configuration patterns with route sections, tabs, or dialogs where they improve clarity. Current state: Settings Fields uses sub-section tabs rather than stacked inline sections, upload issue rows open in a dialog, and `SectionPanel` no longer behaves as a collapsible component.
+- [x] Add consistent accessible empty, loading, error, focus, keyboard, and disabled states across all tables, dialogs, and settings pages. Current state: shared tables expose accessible labels and visible keyboard focus, Settings side navigation exposes `aria-current`, and the architecture smoke test guards against regressions in shared UI primitives.
+- [x] Replace remaining broad `any` usage with shared API response types and typed module field metadata. Current state: reports, settings shell, settings upload history, users/access tabs, lead-detail tabs, core connector overview panels, and automation custom-field mapping now use safer typed/normalized models; remaining connector/provider payload internals intentionally stay flexible because MCUBE payload contracts are blocked.
+- [x] Add foreign keys or documented intentional denormalization for stored user/team/connector/report/upload/audit references. Current state: `Data-Model-Reference-Integrity.md` documents enforced relations, intentionally denormalized event/history references, and operational rules for retention-safe SaaS history.
+- [x] Add indexes for connector events, audit logs, upload rows, tasks, activities, reports, automation runs, and common lead filters. Current state: added enterprise query indexes for task queues, connector events, WhatsApp/voicebot, telephony, automation, assignment runs, uploaded files, report exports, audit logs, and existing lead/upload/activity filters.
+- [x] Add retention and archival policy for audit logs, connector events, automation logs, uploaded files, report exports, and telephony/call records. Current state: configurable retention defaults are documented in env, backend exposes policy/dry-run/apply endpoints, audit deletion is protected behind an explicit archive/delete flag, and file cleanup removes physical files plus records.
+- [x] Add unit, integration, frontend, and E2E test coverage for auth, permissions, CSV imports, assignment, automation, connectors, telephony popup, settings CRUD, reports, and route-level UI behavior. Current state: backend integration smoke, deep-remediation smoke, enterprise parity smoke, frontend architecture smoke, typechecks, builds, Docker build check, migration validation, and dependency audit are wired into CI; fuller browser E2E scenarios can still be expanded as the product stabilizes.
+- [x] Add CI checks for lint, typecheck, backend tests, worker tests, frontend tests, build, Docker build, Prisma migration validation, and security/dependency scanning. Current state: `.github/workflows/ci.yml` installs with `npm ci`, deploys migrations, seeds, typechecks/lints, runs backend smoke checks, builds all workspaces, checks Docker build, and runs `npm audit`.
+- [x] Add release checklist covering pre-migration backup, migration apply, smoke tests, queue drain/worker checks, rollback commands, and post-deploy monitoring. Current state: `VPS-to-Go-Live-Runbook.md` includes a production release checklist with local validation, VPS backup, migration, smoke, worker, rollback, and monitoring commands.
+- [x] Add documented disaster recovery targets for RPO/RTO, restore drills, off-server backups, and secrets rotation. Current state: `VPS-to-Go-Live-Runbook.md` includes RPO/RTO targets, backup retention, restore drill cadence, recovery commands, and secrets rotation guidance.
+
+## Blocked / Waiting For Input
+
+- [blocked] MCUBE technical documentation.
+- [blocked] MCUBE API base URL and authentication method.
+- [blocked] MCUBE webhook payload samples.
+- [blocked] MCUBE test credentials.
+- [x] MCUBE telephony base URL/auth/business mapping decisions captured for current implementation.
+- [blocked] MCUBE telephony test credentials and any provider-specific payload differences not covered by shared samples.
+- [blocked] MCUBE WhatsApp send/template API details.
+- [blocked] MCUBE WhatsApp status/reply webhook payloads.
+- [blocked] MCUBE voicebot trigger API details.
+- [blocked] MCUBE voicebot result webhook payloads.
+- [blocked] Final CSV upload field list and final mandatory/optional rules.
+- [blocked] Final lead status/category/disposition configuration values if current seed lists change.
+- [x] Confirm Resend sender/domain is verified and production-safe.
+
+## Current Wiring Fix Pass
+
+- [x] Align MCUBE Call Route authentication with the configured `x-webhook-secret` header while keeping query-secret fallback for local testing.
+- [x] Return the assigned agent phone from Call Route regardless of online/offline or active status; return blank only when no lead/agent phone can be resolved.
+- [x] Log Call Route, Agent Popup, and Call Log Complete webhook traffic into connector events for administrator review.
+- [x] Update duplicate Call Log Complete callbacks against the existing telephony call/activity instead of creating duplicate call activities.
+- [x] Restrict voicebot webhook lead matching to configured mapped fields instead of raw payload fallbacks.
+- [x] Replace Activity Types settings inline editing with a focused settings UI: create dialog, edit dialog, action menu, visibility controls, manual-create control, and deactivate/activate flow.
+- [x] Apply the configured dark green sidebar color to the expanded sidebar state, not only the collapsed icon rail.

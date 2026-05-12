@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"borderRadius: 1[^0-9]\\\\|borderRadius: 1$\" /Users/arjunh/Documents/commcrm/frontend/src/features/crm/views/TasksView.tsx)",
+      "Bash(npm run *)",
+      "Bash(node test/architecture-smoke.mjs)",
+      "Bash(grep -rn 'transaction\\\\|Transaction\\\\|prisma\\\\.$transaction' /Users/arjunh/Documents/commcrm/workers/src/index.ts)",
+      "Bash(grep -n 'transaction\\\\|prisma\\\\.$transaction\\\\|$transaction' /Users/arjunh/Documents/commcrm/workers/src/index.ts)",
+      "Bash(grep -n 'processLeadUpload\\\\|$transaction\\\\|transaction' /Users/arjunh/Documents/commcrm/workers/src/index.ts)",
+      "Bash(npx tsc *)",
+      "Bash(npx ts-node *)"
+    ]
+  }
+}

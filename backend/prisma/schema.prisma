@@ -1,0 +1,1047 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  name                 String
+  phone                String?   @db.VarChar(10)
+  passwordHash         String?
+  roleId               String
+  teamId               String?
+  permissionTemplateId String?
+  isActive             Boolean   @default(true)
+  isSystem             Boolean   @default(false)
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorDisabledByAdmin Boolean @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  role                 Role      @relation(fields: [roleId], references: [id])
+  team                 Team?     @relation(fields: [teamId], references: [id])
+  permissionTemplate   PermissionTemplate? @relation(fields: [permissionTemplateId], references: [id])
+  salesGroups          UserSalesGroup[]
+  customValues         UserCustomFieldValue[]
+  authSessions         AuthSession[]
+  savedLeadViews       SavedLeadView[]
+
+  @@index([roleId])
+  @@index([teamId])
+}
+
+model AuthSession {
+  id               String    @id @default(uuid())
+  userId           String
+  refreshTokenHash String
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user             User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+model Role {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+}
+
+model Team {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String?  @unique
+  type      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  leads     Lead[]
+}
+
+model SalesGroup {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     UserSalesGroup[]
+}
+
+model UserSalesGroup {
+  id           String     @id @default(uuid())
+  userId       String
+  salesGroupId String
+  createdAt    DateTime   @default(now())
+
+  user         User       @relation(fields: [userId], references: [id])
+  salesGroup   SalesGroup @relation(fields: [salesGroupId], references: [id])
+
+  @@unique([userId, salesGroupId])
+}
+
+model PermissionTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  modules     PermissionTemplateModule[]
+  fields      PermissionTemplateField[]
+}
+
+model PermissionTemplateModule {
+  id                   String   @id @default(uuid())
+  permissionTemplateId String
+  moduleName           String
+  canView              Boolean  @default(false)
+  canCreate            Boolean  @default(false)
+  canEdit              Boolean  @default(false)
+  canDelete            Boolean  @default(false)
+  canExport            Boolean  @default(false)
+  canAssign            Boolean  @default(false)
+  canBulkUpload        Boolean  @default(false)
+  canConfigureAutomation Boolean @default(false)
+  canManageConnector   Boolean  @default(false)
+  canViewAuditLogs     Boolean  @default(false)
+
+  permissionTemplate   PermissionTemplate @relation(fields: [permissionTemplateId], references: [id])
+
+  @@unique([permissionTemplateId, moduleName])
+}
+
+model PermissionTemplateField {
+  id                   String   @id @default(uuid())
+  permissionTemplateId String
+  moduleName           String
+  fieldKey             String
+  access               String
+
+  permissionTemplate   PermissionTemplate @relation(fields: [permissionTemplateId], references: [id])
+
+  @@unique([permissionTemplateId, moduleName, fieldKey])
+}
+
+model FieldDefinition {
+  id           String   @id @default(uuid())
+  moduleName   String
+  fieldKey     String
+  label        String
+  fieldType    String
+  defaultValue String?
+  validation   Json?
+  displayOrder Int      @default(0)
+  isRequired   Boolean  @default(false)
+  isCustom     Boolean  @default(true)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([moduleName, fieldKey])
+}
+
+model FieldMandatoryRule {
+  id         String   @id @default(uuid())
+  moduleName String
+  fieldKey   String
+  roleId     String?
+  teamId     String?
+  context    String?
+  isRequired Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([moduleName, fieldKey])
+}
+
+model UserCustomField {
+  id          String   @id @default(uuid())
+  fieldKey    String   @unique
+  label       String
+  fieldType   String
+  defaultValue Json?
+  validation  Json?
+  options     Json?
+  isRequired  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  values      UserCustomFieldValue[]
+}
+
+model UserCustomFieldValue {
+  id        String   @id @default(uuid())
+  userId    String
+  fieldId   String
+  value     Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  field     UserCustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fieldId])
+}
+
+model Lead {
+  id               String   @id @default(uuid())
+  externalLeadId   String?
+  customerName     String
+  mobile           String   @db.VarChar(10)
+  email            String?
+  branchCode       String?
+  branchName       String?
+  teamId           String?
+  assignedUserId   String?
+  assignedTeamId   String?
+  assignedPartnerId String?
+  offerAmount      Decimal?
+  emiAmount        Decimal?
+  preferredLanguage String?
+  location         String?
+  uploadDate       DateTime?
+  offerExpiryDate  DateTime?
+  status           String   @default("New")
+  category         String?
+  disposition      String?
+  automationStatus String?
+  partnerMapping   String?
+  sourceBatchId    String?
+  createdBy        String?
+  updatedBy        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  team             Team?    @relation(fields: [teamId], references: [id])
+  uploadBatch      LeadUploadBatch? @relation(fields: [sourceBatchId], references: [id])
+  customValues     LeadCustomFieldValue[]
+  activities       Activity[]
+  tasks            Task[]
+
+  @@index([mobile])
+  @@index([status])
+  @@index([category])
+  @@index([disposition])
+  @@index([teamId])
+  @@index([assignedUserId])
+  @@index([assignedTeamId])
+  @@index([branchCode])
+  @@index([externalLeadId])
+  @@index([sourceBatchId])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([assignedUserId, status])
+  @@index([teamId, status])
+}
+
+model LeadUploadBatch {
+  id                String   @id @default(uuid())
+  fileName          String
+  originalFilePath  String?
+  status            String   @default("uploaded")
+  totalRows         Int      @default(0)
+  validRows         Int      @default(0)
+  invalidRows       Int      @default(0)
+  importedRows      Int      @default(0)
+  uploadedBy        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  rows              LeadUploadRow[]
+  leads             Lead[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model LeadUploadRow {
+  id              String   @id @default(uuid())
+  batchId         String
+  rowNumber       Int
+  rawData         Json
+  normalizedData  Json?
+  uploadStatus    String
+  errorMessage    String?
+  leadId          String?
+  createdAt       DateTime @default(now())
+
+  batch           LeadUploadBatch @relation(fields: [batchId], references: [id])
+
+  @@index([batchId])
+  @@index([uploadStatus])
+}
+
+model LeadAssignment {
+  id             String   @id @default(uuid())
+  leadId         String
+  assignedUserId String?
+  assignedTeamId String?
+  reason         String?
+  ruleRunId      String?
+  createdBy      String?
+  createdAt      DateTime @default(now())
+
+  @@index([leadId])
+}
+
+model LeadStatusHistory {
+  id            String   @id @default(uuid())
+  leadId        String
+  oldStatus     String?
+  newStatus     String
+  oldCategory   String?
+  newCategory   String?
+  oldDisposition String?
+  newDisposition String?
+  remarks       String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  @@index([leadId])
+}
+
+model LeadCustomField {
+  id          String   @id @default(uuid())
+  fieldKey    String   @unique
+  label       String
+  fieldType   String
+  defaultValue Json?
+  validation  Json?
+  options     Json?
+  isRequired  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  values      LeadCustomFieldValue[]
+}
+
+model LeadCustomFieldValue {
+  id        String   @id @default(uuid())
+  leadId    String
+  fieldId   String
+  value     Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  field     LeadCustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, fieldId])
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  leadId      String?
+  taskId      String?
+  type        String
+  title       String
+  notes       String?
+  disposition String?
+  metadata    Json?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  customValues ActivityCustomFieldValue[]
+
+  @@index([leadId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([disposition])
+  @@index([leadId, type])
+  @@index([leadId, createdAt])
+}
+
+model ActivityCustomField {
+  id          String   @id @default(uuid())
+  activityTypeCode String @default("ALL")
+  fieldKey    String
+  label       String
+  fieldType   String
+  defaultValue Json?
+  validation  Json?
+  options     Json?
+  isRequired  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  values      ActivityCustomFieldValue[]
+
+  @@unique([activityTypeCode, fieldKey])
+  @@index([activityTypeCode])
+}
+
+model ActivityCustomFieldValue {
+  id         String   @id @default(uuid())
+  activityId String
+  fieldId    String
+  value      Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  field      ActivityCustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, fieldId])
+}
+
+model CustomFieldDefinitionHistory {
+  id          String   @id @default(uuid())
+  moduleName  String
+  fieldId     String
+  fieldKey    String
+  action      String
+  oldValue    Json?
+  newValue    Json?
+  changedBy   String?
+  createdAt   DateTime @default(now())
+
+  @@index([moduleName, fieldKey])
+  @@index([fieldId])
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  leadId      String?
+  assignedTo  String?
+  dueDate     DateTime?
+  priority    String?
+  taskType    String
+  status      String   @default("Pending")
+  remarks     String?
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  comments    TaskComment[]
+
+  @@index([leadId])
+  @@index([assignedTo])
+  @@index([status])
+  @@index([dueDate])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([assignedTo, status])
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  comment   String
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Connector {
+  id          String   @id @default(uuid())
+  name        String
+  type        String
+  provider    String?
+  config      Json?
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ConnectorEvent {
+  id          String   @id @default(uuid())
+  connectorId String?
+  eventType   String
+  rawPayload  Json
+  normalizedPayload Json?
+  status      String   @default("received")
+  error       String?
+  createdAt   DateTime @default(now())
+
+  @@index([connectorId])
+  @@index([eventType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WhatsAppConnector {
+  id        String   @id @default(uuid())
+  name      String
+  provider  String?
+  config    Json?
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WhatsAppNumber {
+  id          String   @id @default(uuid())
+  connectorId String
+  phoneNumber String   @db.VarChar(10)
+  label       String?
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([connectorId])
+  @@index([phoneNumber])
+  @@index([isActive])
+}
+
+model WhatsAppTemplate {
+  id          String   @id @default(uuid())
+  connectorId String?
+  name        String
+  category    String?
+  language    String?
+  content     String
+  mediaConfig Json?
+  availableInChat Boolean @default(false)
+  status      String   @default("draft")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variables   WhatsAppTemplateVariable[]
+
+  @@index([connectorId])
+  @@index([status])
+  @@index([availableInChat])
+}
+
+model WhatsAppTemplateVariable {
+  id          String   @id @default(uuid())
+  templateId  String
+  variableKey String
+  displayName String?
+  defaultMapping Json?
+
+  template    WhatsAppTemplate @relation(fields: [templateId], references: [id])
+}
+
+model WhatsAppConversation {
+  id          String   @id @default(uuid())
+  leadId      String?
+  userId      String?
+  lastMessageAt DateTime?
+  serviceWindowUntil DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([userId])
+}
+
+model WhatsAppMessage {
+  id             String   @id @default(uuid())
+  conversationId String?
+  leadId         String?
+  direction      String
+  messageType    String
+  content        String?
+  status         String   @default("queued")
+  providerMessageId String?
+  rawPayload     Json?
+  sentBy         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([conversationId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WhatsAppQuickReply {
+  id        String   @id @default(uuid())
+  name      String
+  category  String?
+  channel   String   @default("WhatsApp")
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([channel])
+  @@index([isActive])
+}
+
+model VoicebotConnector {
+  id        String   @id @default(uuid())
+  name      String
+  config    Json?
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VoicebotTriggerTemplate {
+  id          String   @id @default(uuid())
+  connectorId String
+  name        String
+  method      String
+  url         String
+  headers     Json?
+  queryParams Json?
+  bodyTemplate Json?
+  responseConfig Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([connectorId])
+}
+
+model VoicebotTriggerVariable {
+  id          String   @id @default(uuid())
+  templateId  String
+  variableKey String
+  displayName String?
+  defaultMapping Json?
+
+  @@index([templateId])
+}
+
+model VoicebotWebhookMapping {
+  id          String   @id @default(uuid())
+  connectorId String
+  sampleBody  Json?
+  fieldMappings Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([connectorId])
+  @@index([isActive])
+}
+
+model VoicebotCall {
+  id             String   @id @default(uuid())
+  leadId         String?
+  providerCallId String?
+  callStatus     String?
+  recordingUrl   String?
+  transcript     String?
+  summary        String?
+  intent         String?
+  disposition    String?
+  duration       Int?
+  startedAt      DateTime?
+  endedAt        DateTime?
+  rawPayload     Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([providerCallId])
+  @@index([callStatus])
+  @@index([startedAt])
+  @@index([createdAt])
+}
+
+model TelephonyCall {
+  id             String   @id @default(uuid())
+  leadId         String?
+  phoneNumber    String?  @db.VarChar(10)
+  agentUserId    String?
+  callDirection  String?
+  callStatus     String?
+  callDuration   Int?
+  recordingUrl   String?
+  providerCallId String?
+  disposition    String?
+  startedAt      DateTime?
+  endedAt        DateTime?
+  rawPayload     Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([providerCallId])
+  @@index([agentUserId])
+  @@index([callStatus])
+  @@index([startedAt])
+  @@index([createdAt])
+}
+
+model TelephonyRouteRequest {
+  id          String   @id @default(uuid())
+  callerId    String   @db.VarChar(10)
+  leadId      String?
+  returnedAgentNumber String? @db.VarChar(10)
+  rawPayload  Json?
+  createdAt   DateTime @default(now())
+
+  @@index([callerId])
+  @@index([leadId])
+  @@index([createdAt])
+}
+
+model TelephonyAgentPopupEvent {
+  id          String   @id @default(uuid())
+  leadId      String?
+  callSessionId String?
+  agentPhone  String?  @db.VarChar(10)
+  agentUserId String?
+  rawPayload  Json
+  status      String   @default("received")
+  deliveredAt DateTime?
+  seenAt      DateTime?
+  closedAt    DateTime?
+  lastSessionId String?
+  deliveryCount Int    @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([agentPhone])
+  @@index([agentUserId])
+  @@index([status])
+  @@index([leadId])
+  @@index([callSessionId])
+  @@index([createdAt])
+}
+
+model TelephonyCallLogEvent {
+  id          String   @id @default(uuid())
+  leadId      String?
+  callSessionId String?
+  rawPayload  Json
+  status      String   @default("received")
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+  @@index([callSessionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AutomationWorkflow {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  status      String   @default("draft")
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  versions    AutomationWorkflowVersion[]
+}
+
+model AutomationWorkflowVersion {
+  id          String   @id @default(uuid())
+  workflowId  String
+  version     Int
+  definition  Json
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  workflow    AutomationWorkflow @relation(fields: [workflowId], references: [id])
+
+  @@unique([workflowId, version])
+  @@index([isPublished])
+}
+
+model AutomationRun {
+  id          String   @id @default(uuid())
+  workflowId  String
+  leadId      String?
+  status      String   @default("running")
+  exitReason  String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  steps       AutomationRunStep[]
+
+  @@index([leadId])
+  @@index([workflowId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model AutomationRunStep {
+  id        String   @id @default(uuid())
+  runId     String
+  nodeId    String
+  nodeType  String
+  status    String   @default("pending")
+  input     Json?
+  output    Json?
+  error     String?
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  run       AutomationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([nodeType])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model AutomationScheduledJob {
+  id        String   @id @default(uuid())
+  runId     String?
+  nodeId    String?
+  queueJobId String?
+  runAt     DateTime
+  status    String   @default("scheduled")
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+  @@index([queueJobId])
+  @@index([runAt])
+  @@index([status])
+}
+
+model AutomationExitCondition {
+  id         String   @id @default(uuid())
+  workflowId String
+  condition  Json
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([workflowId])
+  @@index([isActive])
+}
+
+model AutomationApiCallLog {
+  id          String   @id @default(uuid())
+  workflowId  String?
+  runId       String?
+  nodeId      String?
+  request     Json
+  response    Json?
+  status      String
+  error       String?
+  createdAt   DateTime @default(now())
+
+  @@index([workflowId])
+  @@index([runId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AssignmentRule {
+  id          String   @id @default(uuid())
+  name        String
+  priority    Int      @default(100)
+  targetType  String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  conditions  AssignmentRuleCondition[]
+  actions     AssignmentRuleAction[]
+}
+
+model AssignmentRuleCondition {
+  id        String   @id @default(uuid())
+  ruleId    String
+  fieldPath String
+  operator  String
+  value     Json?
+  createdAt DateTime @default(now())
+
+  rule      AssignmentRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+}
+
+model AssignmentRuleAction {
+  id        String   @id @default(uuid())
+  ruleId    String
+  actionType String
+  config    Json
+  createdAt DateTime @default(now())
+
+  rule      AssignmentRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+}
+
+model AssignmentRuleRun {
+  id        String   @id @default(uuid())
+  ruleId    String?
+  leadId    String?
+  status    String
+  result    Json?
+  createdAt DateTime @default(now())
+
+  logs      AssignmentRuleRunLog[]
+
+  @@index([ruleId])
+  @@index([leadId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AssignmentRuleRunLog {
+  id        String   @id @default(uuid())
+  runId     String
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  run       AssignmentRuleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([createdAt])
+}
+
+model UploadedFile {
+  id          String   @id @default(uuid())
+  fileName    String
+  filePath    String
+  fileType    String?
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+
+  @@index([fileType])
+  @@index([uploadedBy])
+  @@index([createdAt])
+}
+
+model SavedReport {
+  id          String   @id @default(uuid())
+  name        String
+  reportType  String
+  filters     Json?
+  columns     Json?
+  visibility  String   @default("private")
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  schedules   ScheduledReport[]
+
+  @@index([reportType])
+  @@index([visibility])
+  @@index([createdBy])
+}
+
+model SavedLeadView {
+  id                 String   @id @default(uuid())
+  name               String
+  userId             String
+  filterForm         Json?
+  advancedMatch      String   @default("all")
+  advancedConditions Json?
+  visibleLeadFields  Json?
+  density            String   @default("compact")
+  isDefault          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isDefault])
+}
+
+model ScheduledReport {
+  id            String   @id @default(uuid())
+  savedReportId String?
+  name          String
+  reportType    String
+  filters       Json?
+  frequency     String
+  recipients    Json?
+  nextRunAt     DateTime?
+  lastRunAt     DateTime?
+  isActive      Boolean  @default(true)
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  savedReport   SavedReport? @relation(fields: [savedReportId], references: [id])
+
+  @@index([savedReportId])
+  @@index([isActive])
+  @@index([nextRunAt])
+  @@index([createdBy])
+}
+
+model ReportExport {
+  id            String   @id @default(uuid())
+  reportType    String
+  status        String   @default("pending")
+  filters       Json?
+  fileId        String?
+  fileName      String?
+  rowCount      Int      @default(0)
+  error         String?
+  requestedBy   String?
+  requestedAt   DateTime @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([reportType])
+  @@index([status])
+  @@index([requestedBy])
+  @@index([requestedAt])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  moduleName     String
+  entityId       String?
+  action         String
+  oldValue       Json?
+  newValue       Json?
+  changedBy      String?
+  changedByType  String   @default("user")
+  requestId      String?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  @@index([moduleName])
+  @@index([entityId])
+  @@index([requestId])
+  @@index([action])
+  @@index([changedBy])
+  @@index([createdAt])
+}
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  level     String
+  message   String
+  context   Json?
+  createdAt DateTime @default(now())
+}
+
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,1524 @@
+# Codex Project Context: Unnatify CRM
+
+## 1. Purpose of This Document
+
+This document is the living source of truth for Codex and any AI/code assistant working on the Unnatify CRM project. Keep this updated whenever architecture, tools, database schema, workflows, deployment, UI rules, or integration decisions change.
+
+Codex should read this document before making code changes.
+
+---
+
+## 2. Product Summary
+
+Unnatify CRM is an automation-first CRM and lead conversion platform designed for loan/admission-style customer journeys. The system should manage leads, automate outreach through WhatsApp and voicebot journeys, capture customer intent, route interested leads to human agents/partners/branches, and track all actions through activities, tasks, logs, and audit trails.
+
+The product is not only a CRM. It is a combination of:
+
+* Lead management system
+* Workflow automation platform
+* WhatsApp communication platform
+* Voicebot orchestration system
+* Telephony-connected CRM
+* Task and follow-up management system
+* Admin operations and audit platform
+
+There is no Opportunity module needed at this stage.
+
+---
+
+## 3. Core Business Requirement
+
+The system should support a journey like this:
+
+1. Admin uploads leads.
+2. System validates uploaded leads.
+3. Leads are distributed branch-wise / team-wise / partner-wise.
+4. Automation starts from the lead upload date.
+5. First WhatsApp loan/offer message is triggered.
+6. Reminder is sent after a configured gap, such as 10 days.
+7. Follow-up automation continues based on customer behavior.
+8. Voicebot call is triggered when required.
+9. Customer intent is captured from WhatsApp replies or voicebot responses.
+10. Leads are categorized into buckets such as Hot, Warm, Cold, Not Interested, Expired, Converted.
+11. Interested/qualified leads are assigned to partner/branch/agent users.
+12. Human follow-up happens through task and activity management.
+13. Automation stops when converted, expired, opted out, wrong number, not interested, or max attempts reached.
+
+---
+
+## 4. Target Users
+
+### 4.1 Admin
+
+Admin can:
+
+* Upload leads
+* Configure automations
+* Configure users, roles, teams, sales groups, and permissions
+* View all leads
+* View reports and dashboards
+* View logs and audit trails
+* Manage connectors
+
+### 4.2 Branch Manager
+
+Branch manager can:
+
+* View leads assigned to their branch
+* View branch-level dashboards
+* Track agent/partner follow-ups
+* Monitor conversion and pending tasks
+
+### 4.3 Partner / Agent / Sales User
+
+Partner or agent can:
+
+* View assigned leads
+* View customer details based on permissions
+* View WhatsApp and voicebot history
+* Call customer through click-to-call
+* Add follow-up tasks
+* Update lead status and dispositions
+* Mark conversion / not interested / follow-up required
+
+### 4.4 System User
+
+There must be a default user called `System`.
+
+Any action performed by automation, scheduled jobs, workers, integrations, or system processes should be recorded as created/modified by `System`.
+
+---
+
+## 5. Recommended Tech Stack
+
+### 5.1 Frontend
+
+Use:
+
+* Next.js
+* React
+* TypeScript
+* Material Design 3 / Material Expressive style language
+* Compact, clean, intuitive UI
+* UI should follow the design language of `arjunharish77/crm-new` as reference only, using lighter shades, blue-focused accents, and a more compact CRM layout
+* Client-side rendering for CRM dashboards where appropriate
+* Static rendering only for public/marketing pages if any
+
+Frontend should prioritize:
+
+* Fast navigation
+* Compact data tables
+* Clean dashboards
+* Clear actions
+* Low visual clutter
+* Good mobile responsiveness where useful, but desktop-first for CRM usage
+* MUI/MUI X Data Grid style patterns for dense CRM tables
+* React Flow style patterns for the automation builder
+
+### 5.2 Backend API
+
+Use:
+
+* Node.js
+* NestJS
+* TypeScript
+* Prisma for ORM and migrations
+* REST APIs initially
+* Clear service/controller/repository structure
+
+Backend responsibilities:
+
+* Authentication
+* Authorization
+* Lead APIs
+* Activity APIs
+* Task APIs
+* Automation config APIs
+* Connector APIs
+* Webhook ingestion APIs
+* Admin/ops APIs
+
+### 5.3 Workers
+
+Use:
+
+* Node.js
+* BullMQ
+* Redis
+
+Workers handle all background and scheduled processes:
+
+* Lead upload processing
+* Lead validation
+* WhatsApp message triggers
+* Reminder scheduling
+* Voicebot trigger jobs
+* Expiry checks
+* Stop-condition checks
+* Partner assignment
+* Retry and failure handling
+
+Never run long-running automation directly inside API request-response flows.
+
+### 5.4 Database
+
+Use:
+
+* PostgreSQL
+
+Postgres stores:
+
+* Users
+* Roles
+* Teams
+* Sales groups
+* Permission templates
+* Leads
+* Custom fields
+* Activities
+* Tasks
+* Automation definitions
+* Connector configs
+* WhatsApp messages
+* Voicebot logs
+* Telephony logs
+* Audit logs
+* Uploaded file metadata
+
+### 5.5 Queue / Cache
+
+Use:
+
+* Redis
+* BullMQ
+
+Redis is used for:
+
+* Queue state
+* Delayed jobs
+* Retry jobs
+* Optional caching
+
+### 5.6 VPS / Infra
+
+Initial production infra:
+
+* Hostinger KVM 4 VPS
+* Ubuntu 22.04 LTS or Ubuntu 24.04 LTS
+* Docker
+* Docker Compose
+* Nginx reverse proxy
+* SSL using Certbot
+* Postgres inside VPS initially
+* Redis inside VPS initially
+* Daily backups
+* Log rotation
+
+Do not use Kubernetes at this stage.
+
+Do not use PM2 if Docker is used.
+
+---
+
+## 6. Deployment Architecture
+
+Initial architecture:
+
+```txt
+VPS
+│
+├── Nginx / Reverse Proxy
+│   ├── app.unnatify.com  → Frontend
+│   └── api.unnatify.com  → Backend API
+│
+├── Docker Compose
+│   ├── frontend container
+│   ├── backend container
+│   ├── worker container
+│   ├── postgres container
+│   └── redis container
+│
+├── uploads/
+├── logs/
+├── backups/
+└── scripts/
+```
+
+Only ports 80 and 443 should be publicly exposed.
+
+Do not publicly expose:
+
+* Postgres 5432
+* Redis 6379
+* BullMQ dashboard
+* pgAdmin without restrictions
+
+---
+
+## 7. Suggested Repository Structure
+
+Preferred structure once project is created:
+
+```txt
+unnatify-crm/
+│
+├── docker-compose.yml
+├── .env.example
+├── README.md
+│
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── next.config.js
+│   ├── public/
+│   └── src/
+│       ├── app/
+│       ├── components/
+│       ├── features/
+│       ├── lib/
+│       ├── styles/
+│       └── theme/
+│
+├── backend/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+│       ├── app.ts
+│       ├── server.ts
+│       ├── config/
+│       ├── db/
+│       ├── middleware/
+│       ├── modules/
+│       │   ├── auth/
+│       │   ├── users/
+│       │   ├── roles/
+│       │   ├── teams/
+│       │   ├── permissions/
+│       │   ├── leads/
+│       │   ├── activities/
+│       │   ├── tasks/
+│       │   ├── automations/
+│       │   ├── connectors/
+│       │   ├── whatsapp/
+│       │   ├── voicebot/
+│       │   ├── telephony/
+│       │   ├── audit-logs/
+│       │   └── ops/
+│       └── utils/
+│
+├── workers/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+│       ├── index.ts
+│       ├── queues/
+│       ├── processors/
+│       ├── jobs/
+│       └── utils/
+│
+├── nginx/
+│   └── nginx.conf
+│
+├── scripts/
+│   ├── deploy.sh
+│   ├── backup-postgres.sh
+│   └── restore-postgres.sh
+│
+├── uploads/
+│   ├── leads/
+│   ├── documents/
+│   └── reports/
+│
+├── logs/
+│   ├── backend/
+│   ├── workers/
+│   └── nginx/
+│
+└── backups/
+    └── postgres/
+```
+
+---
+
+## 8. Core Modules
+
+## 8.1 Lead Module
+
+Lead module is the primary CRM entity.
+
+Lead should support:
+
+* Standard fields
+* Custom fields
+* Field-level permissions
+* Lead ownership
+* Team/branch/partner assignment
+* Activity timeline
+* Task timeline
+* Communication history
+* Automation status
+* Lead category
+* Lead stage/status
+* Lead disposition
+* Source/upload batch tracking
+* CSV upload only for initial lead imports
+* Configurable mandatory fields
+* Configurable Lead Status list
+* Configurable Lead Category list
+* Configurable Lead Disposition list
+* Lead-level disposition update form with configurable extra fields
+
+Important lead fields may include:
+
+* id
+* lead_id / external_lead_id
+* customer_name
+* mobile
+* email
+* branch_id
+* assigned_user_id
+* assigned_team_id
+* assigned_partner_id
+* offer_amount
+* emi_amount
+* preferred_language
+* location
+* upload_date
+* offer_expiry_date
+* status
+* category
+* disposition
+* automation_status
+* created_by
+* updated_by
+* created_at
+* updated_at
+
+No Opportunity module is required.
+
+Confirmed initial CSV lead fields:
+
+```txt
+customer_name - mandatory
+mobile_number - mandatory
+loan_id / lead_id - mandatory
+branch_code - mandatory
+branch_name - optional if branch_code is present
+loan_offer_amount - mandatory
+emi_amount - optional
+upload_date - mandatory
+loan_closure / offer_expiry_date - mandatory
+customer_location - optional
+preferred_language - optional
+partner_mapping - optional
+```
+
+These fields should still be manageable through configurable field/mandatory-field settings where possible.
+
+Phone number rule:
+
+```txt
+Lead mobile numbers and user/agent phone numbers must be stored as 10 digits only.
+No +91 prefix.
+No country code.
+No spaces or symbols.
+All telephony requests and responses should use 10-digit numbers.
+CSV import should validate and store mobile_number as exactly 10 digits.
+```
+
+Lead Status, Lead Category, and Lead Disposition values must be configurable.
+
+Initial Lead Status values:
+
+```txt
+New
+Valid
+Invalid
+Assigned
+In Progress
+Automation Active
+Automation Paused
+Converted
+Closed
+Expired
+```
+
+Initial Lead Category values:
+
+```txt
+Hot Lead
+Warm Lead
+Cold Lead
+Callback Requested
+Need More Details
+Not Interested
+Wrong Number
+Already Applied
+Converted
+Expired
+No Response
+```
+
+Initial Lead Disposition values:
+
+```txt
+Converted
+Interested
+Follow-up Required
+Callback Scheduled
+Documents Pending
+Not Interested
+Not Reachable
+Wrong Number
+Escalated
+```
+
+Partner/user disposition updates should happen from a form at lead level. The disposition form should support extra configurable fields when required, such as callback date/time, remarks, required documents, or next follow-up date.
+
+CSV upload history is required in Settings. Upload history should show every upload batch, upload status, row counts, invalid counts, uploader, timestamps, and a downloadable CSV copy of uploaded leads with an extra `upload_status` column for each row.
+
+---
+
+## 8.2 Activity Module
+
+Activities represent all actions/events related to leads.
+
+Activity types should include:
+
+* Call
+* WhatsApp Message
+* Voicebot Call
+* System Activity
+* User Note
+* Status Change
+* Assignment Change
+* Document Shared
+
+System activities must be generated automatically for connector events and automation updates.
+
+Activity should support:
+
+* Custom fields
+* Field-level permissions
+* Metadata JSON
+* Created by user or System
+* Linked lead
+* Linked task if applicable
+
+---
+
+## 8.3 Task Module
+
+Task module is required.
+
+Follow-up should be created as a task.
+
+Task types:
+
+* Follow Up
+* Callback
+* Document Collection
+* Verification
+* Manual Review
+
+Task statuses:
+
+* Pending
+* In Progress
+* Completed
+* Missed
+* Cancelled
+
+Task should include:
+
+* lead_id
+* assigned_to
+* due_date
+* priority
+* task_type
+* status
+* remarks
+* created_by
+* updated_by
+
+---
+
+## 8.4 Users, Roles, Teams, Sales Groups
+
+Required modules:
+
+* Users
+* Roles
+* Teams
+* Sales Groups
+* Permission Templates
+
+User should belong to:
+
+* Exactly one team
+* One or more sales groups if needed
+* One role
+* One permission template or derived permission set
+
+Initial fixed roles:
+
+* Administrator
+* Sales Manager
+* Sales User
+
+Sales Groups are required and are used for sales-side grouping and assignment logic.
+
+Teams are configurable and should represent business groupings such as branches, partners, admin teams, or operational teams. Branch Manager, Partner, and similar business labels should be modeled as Teams/configuration, not as fixed roles unless explicitly changed later.
+
+Users can have custom fields. User-level custom fields can be used in assignment rules.
+
+Assignment rule conflict behavior:
+
+```txt
+If multiple assignment rules match, the rule with the lowest priority number wins.
+Example: priority 1 runs before priority 2.
+If multiple matching rules have the same priority, the older rule wins.
+If no rule matches, the lead remains unassigned.
+```
+
+---
+
+## 8.5 Permission System
+
+Permission system must support:
+
+* Module-level permissions
+* Action-level permissions
+* Field-level permissions for User
+* Field-level permissions for Lead
+* Field-level permissions for Activity
+* Configurable mandatory fields for User, Lead, and Activity
+* Field visibility/editability/hide/mask rules managed inside permission templates
+
+Actions:
+
+* View
+* Create
+* Edit
+* Delete
+* Export
+* Assign
+* Bulk Upload
+* Configure Automation
+* Manage Connector
+* View Audit Logs
+
+Field-level permissions:
+
+* visible
+* editable
+* hidden
+* masked
+
+Field-level access for standard and custom fields should be configured through Permission Templates, not directly on the custom field definition.
+
+Example:
+
+A partner user may see customer name and mobile but may not see internal scoring fields or system metadata.
+
+---
+
+## 8.6 Custom Fields
+
+Custom fields are required for:
+
+* Users
+* Leads
+* Activities
+
+Custom field types:
+
+* Text
+* Number
+* Date
+* DateTime
+* Dropdown
+* Multi-select
+* Boolean
+* Phone
+* Email
+* URL
+* JSON
+
+Custom fields should support:
+
+* Required flag
+* Default value
+* Validation rule
+* Display order
+* Active/inactive status
+* Mandatory/optional behavior configurable by module, role, team, or workflow context where needed
+
+Custom field definitions should control field structure. Permission templates should control who can view, edit, hide, or see masked values.
+
+---
+
+## 9. Connector Requirements
+
+MCUBE is the selected provider for WhatsApp, voicebot, and telephony/click-to-call integrations.
+
+MCUBE technical documentation, webhook payload samples, authentication details, and sandbox/test credentials will be provided later. Connector implementation should keep provider-specific mapping isolated so MCUBE payloads, statuses, and dispositions can be normalized into the CRM data model.
+
+## 9.1 Telephony Connector
+
+Telephony connector must support:
+
+* Call log posting
+* Click-to-call
+* Incoming call webhook
+* Inbound call route API
+* Agent popup
+* Call disposition updates
+* Call recording URL storage
+* Telephony connector configuration UI
+* Mail-merge support from Lead and User fields in click-to-call request body
+
+Telephony events should create system Call activities.
+
+Call log fields:
+
+* lead_id
+* phone_number
+* agent_user_id
+* call_direction
+* call_status
+* call_duration
+* recording_url
+* provider_call_id
+* disposition
+* started_at
+* ended_at
+* raw_payload
+
+Click-to-call flow:
+
+1. User clicks call button on lead.
+2. Backend calls telephony provider API.
+3. Telephony provider connects agent/customer.
+4. Provider posts call log webhook.
+5. System creates Call activity.
+6. Lead timeline updates.
+
+Agent popup flow:
+
+1. Incoming call webhook received.
+2. System identifies lead by phone.
+3. Popup event is sent to frontend/agent session if agent is online.
+4. Popup appears in all active browser tabs for that logged-in agent.
+5. If popup is closed in one tab, it closes from all active tabs for that agent.
+6. Agent can view configured lead details in popup or open full lead detail in a new tab.
+
+Agent popup UI should be configurable:
+
+* Configure which lead fields appear in popup
+* Configure which lead detail tabs/sections appear in popup
+* Include option to open lead in new browser tab
+* Store popup events for audit/history
+* If agent is offline, store event for recent/missed call notifications later
+
+Inbound call route API requirement:
+
+```txt
+Method: GET
+Query param: caller_id=<lead_or_caller_phone>
+Response content type: text/plain
+Response body: agent phone number only
+```
+
+Reference pattern with placeholders:
+
+```txt
+GET /webhooks/telephony/lead-route?caller_id=9845098450
+Response: 9123456789
+```
+
+Use clean Unnatify API URLs, not LeadSquared-compatible URL paths with org/access/secret path parameters.
+
+Routing logic should find the lead by caller phone, determine assigned user/team/agent, return the mapped agent phone number, and log the route request. If no lead is found or no assigned/mapped agent number is available, return a blank text response.
+
+Phone format rule:
+
+```txt
+caller_id is expected as a 10-digit phone number.
+Lead mobile lookup should use the 10-digit stored mobile number.
+Returned agent number must also be 10 digits.
+```
+
+Agent popup API requirement:
+
+```txt
+Method: POST
+Content-Type: application/json
+Also tolerate application/x-www-form-urlencoded if provider sends legacy format
+Response content type: application/json
+```
+
+Agent popup request fields may include SourceNumber, DestinationNumber, DisplayNumber, Status, Direction, CallSessionId, CallDuration, and StartTime. Response should return success status, message, and CRM call session id.
+
+Recommended clean endpoint:
+
+```txt
+POST /webhooks/telephony/agent-popup
+```
+
+Call log complete API requirement:
+
+```txt
+Method: POST
+Content-Type: application/json
+Also tolerate application/x-www-form-urlencoded if provider sends legacy format
+Response content type: application/json
+```
+
+Call log request fields may include SourceNumber, DestinationNumber, DisplayNumber, StartTime, EndTime, CallDuration, Status, ResourceURL, Direction, and CallSessionId. The system should store the raw payload, normalize the call, link it to lead/user where possible, and create a Call activity only from Call Log Complete.
+
+Recommended clean endpoint:
+
+```txt
+POST /webhooks/telephony/call-log-complete
+```
+
+Click-to-call configuration should support URL, custom headers, HTTP method, response keyword, request type, data template/body, response type, provider support email, test call option, and request/response logs.
+
+Click-to-call data template/body should support mail merge from Lead and User standard/custom fields.
+
+Mail-merged phone variables must resolve to 10-digit numbers.
+
+For click-to-call, the agent number should be the logged-in user's 10-digit phone number from the user profile.
+
+Example body shape:
+
+```json
+{
+  "HTTP_AUTHORIZATION": "stored-provider-token",
+  "exenumber": "{{user.phone}}",
+  "custnumber": "{{lead.mobile}}"
+}
+```
+
+Real org IDs, access keys, secret keys, and provider tokens must not be committed to source control or stored in plain planning docs. Use environment variables or encrypted connector configuration where needed.
+
+---
+
+## 9.2 WhatsApp Connector
+
+WhatsApp connector must support:
+
+* Connector settings
+* Multiple WhatsApp business numbers provision
+* Template management
+* Template variable mapping
+* Template media/header/document provision
+* Automation action to send WhatsApp templates
+* Send template messages
+* Send text messages
+* Send documents
+* Receive customer replies
+* Receive button clicks
+* Track message status
+* Delivery/read/failed webhook handling
+* Store raw webhook payloads
+* Opt-in/opt-out field handling
+
+WhatsApp statuses:
+
+* queued
+* sent
+* delivered
+* read
+* failed
+* replied
+
+WhatsApp events should create system WhatsApp Message activities.
+
+Required UI:
+
+* Floating chat button at bottom-right
+* Clicking opens chat window
+* Chat should show leads where WhatsApp messages have been triggered
+* Chat should look and behave like a compact counsellor chat platform inspired by LeadSquared Converse
+* User can send messages, templates, and documents from chat window
+* Messages should be linked to lead timeline
+* Chat entry from lead detail
+* Chat inbox/recent contacts
+* Search leads/conversations
+* View conversation in lead context
+* Send approved template
+* Send free text if service window is active
+* Send/receive supported media where provider supports it
+* Quick replies by category
+* Real-time inbound message notification
+* Message status indicators
+* Permission-template based masking for sensitive lead fields
+
+WhatsApp automation node requirements:
+
+* Select WhatsApp connector/account/number
+* Select approved template
+* Show only variables required by the selected template
+* For each variable, provide dropdown to select Lead, User, Activity, or custom field values
+* Support media/document URL mapping from Lead or Activity fields where template requires it
+* Store request/response logs
+* Store raw provider response
+* Create WhatsApp activity on lead
+
+WhatsApp connector should be inspired by LeadSquared WhatsApp + Converse behavior. Templates should be usable from automation and counsellor chat. Beyond the active service window, counsellors should use approved templates. Within the active service window, counsellors can use real-time chat/free text if provider supports it. Incoming messages should create or update lead-linked WhatsApp activities. Incoming messages from unknown numbers can be handled by configurable lead creation/routing settings later. Chat recent contacts should be user-specific. Notifications should be configurable, such as notify lead owner or last sender.
+
+---
+
+## 9.3 Voicebot Connector
+
+Voicebot connector must support:
+
+* Voicebot connector settings
+* Postman-like API call configuration for triggering voicebot
+* Request method, URL, headers, query params, and body template
+* Request/response type settings
+* Response success keyword or success-path configuration
+* Test call option
+* Automation action to trigger voicebot
+* Variable extraction from trigger body template
+* Variable mapping UI in automation
+* Webhook URL generation
+* Sample webhook body paste box
+* Webhook sample-body parser
+* Mapping from webhook sample fields to voicebot activity fields
+* Trigger call
+* Receive webhook/callback
+* Store call status
+* Store recording URL
+* Store transcript
+* Store summary
+* Store intent
+* Store disposition
+* Store raw payload
+
+Voicebot events should create system Voicebot Call activities.
+
+Voicebot trigger body variable behavior:
+
+* Admin configures trigger API body in connector settings
+* If body contains variables, the system extracts only those variables
+* When the connector is used in automation, the automation node asks only for those extracted variables
+* Each extracted variable should have a dropdown to map a Lead, User, Activity, or custom field
+* The automation node should not show unrelated variables
+
+Webhook mapping behavior:
+
+* System generates a webhook URL for the voicebot connector
+* Admin can paste sample webhook body
+* System parses the sample JSON/form body
+* Admin maps sample fields to voicebot activity fields
+* Admin can map to standard fields such as status, recording URL, transcript, summary, intent, disposition, duration, started_at, ended_at
+* Admin can map to custom activity fields
+* Raw webhook payload must always be stored
+* Unmapped fields can remain in metadata JSON
+
+Voicebot dispositions may include:
+
+* Interested
+* Need More Details
+* Request Callback
+* Already Applied
+* Call Later
+* Not Interested
+* Wrong Number
+* Do Not Contact
+* No Response
+* Not Reachable
+
+---
+
+## 10. Automation Engine
+
+Automation must be configurable by admin users.
+
+No default automation workflow should be created or hardcoded. Loan journeys such as Day 0 WhatsApp offer, reminder gap, follow-up, voicebot, assignment, stop conditions, and pause conditions must be created through the configurable automation engine.
+
+Preferred UI:
+
+* Node-based visual workflow builder
+* Drag-and-drop nodes
+* Connectors between nodes
+* Easy to create and modify
+* LeadSquared-style configurable journey builder
+* Clicking `+` should add a new node
+* If/else and multi-condition if/else nodes
+* Delete node option
+* Clone node option
+* Configurable workflow-level exit conditions without requiring a separate node
+
+Automation should support:
+
+### Triggers
+
+* Lead uploaded
+* Lead created
+* Lead updated
+* WhatsApp message status changed
+* WhatsApp reply received
+* Voicebot disposition received
+* Call log received
+* Task completed
+* Time delay reached
+* Offer expiry reached
+
+### Conditions
+
+* If lead status equals value
+* If lead category equals value
+* If WhatsApp reply exists
+* If no response after X days
+* If voicebot intent equals value
+* If branch equals value
+* If assigned user exists / does not exist
+* If expiry date has passed
+* If user custom field equals value
+* If lead custom field equals value
+* If activity field/custom field equals value
+* Multi-condition AND/OR groups
+
+### Actions
+
+* Send WhatsApp message
+* Trigger voicebot
+* Create task
+* Update lead field
+* Create activity
+* Assign lead using Assignment node
+* Stop automation
+* Pause automation
+* Resume automation
+* Mark expired
+* Notify user/team
+* Call external API using a Postman-like API call builder
+
+Assignment should not run only when a lead is created. The assignment engine must be callable from automation at any stage using an Assignment node. Assignment nodes should support existing assignment rules, inline assignment configuration, reassignment, user/team assignment, lead/user/activity standard and custom fields, run logs, and explanation of why a user/team was selected.
+
+API call action should support method, URL, headers, query params, body, authentication provision, timeout, retries, test call, request/response logs, and mail-merge variables from lead or activity standard/custom fields.
+
+API call node security:
+
+* Only Administrator users can create or edit API-call nodes
+* Only HTTPS URLs are allowed
+* Block localhost URLs
+* Block private/internal IP ranges
+* Set request timeout
+* Limit retry count
+* Log request and response
+* Mask secrets/tokens in UI and logs
+* Store API-call configuration changes in audit logs
+
+### Stop Conditions
+
+Automation should stop when:
+
+* Lead converted
+* Customer not interested
+* Customer opted out
+* Wrong number detected
+* Offer expiry date crossed
+* Maximum attempts completed
+
+### Pause Conditions
+
+Automation should pause when:
+
+* Lead assigned to partner
+* Callback scheduled
+* Human conversation is active
+* Verification/application pending
+
+Lead automation report is required. It should show workflow runs per lead and allow drilling into one automation run to see each completed, pending, skipped, failed, or retried step with timestamps, results, and errors.
+
+---
+
+## 11. Audit Logs
+
+Audit logs are required for all modules.
+
+Every create, update, delete, assignment, status change, permission change, connector change, automation change, and system action must be logged.
+
+Audit log should include:
+
+* id
+* module_name
+* entity_id
+* action
+* old_value
+* new_value
+* changed_by
+* changed_by_type: user/system
+* ip_address
+* user_agent
+* created_at
+
+System-generated changes should show:
+
+```txt
+Modified by: System
+```
+
+Audit logs should be read-only.
+
+---
+
+## 12. Admin Operations Center
+
+Create an internal admin/ops area.
+
+Admin Operations Center must not be visible to normal Administrator users. It should be accessible only through a separate backend-controlled custom login for ops/super-maintenance access.
+
+Admin Operations Center login rules:
+
+* Separate URL such as `/ops-login`
+* Separate backend-created ops users
+* Username/password login
+* Disabled unless at least one ops user exists
+* Ops actions should not be audited unless this requirement changes later
+
+Suggested pages:
+
+```txt
+/admin/ops/logs
+/admin/ops/files
+/admin/ops/db
+/admin/ops/queues
+/admin/ops/health
+```
+
+### 12.1 Logs Viewer
+
+Should show:
+
+* Backend logs
+* Worker logs
+* Connector webhook logs
+* Automation failure logs
+
+Load only last N lines, such as 200/500/1000.
+
+Do not load full large log files.
+
+### 12.2 Files Viewer
+
+Should show:
+
+* Uploaded lead files
+* Generated reports
+* Shared documents if stored locally
+
+Allow safe download.
+
+Do not expose raw server directories.
+
+### 12.3 DB Viewer
+
+Only read-only table view is required.
+
+No SQL query editor.
+
+Features:
+
+* Select table
+* View rows
+* Pagination
+* Search/filter later
+
+Must whitelist allowed tables.
+
+Never allow arbitrary SQL from UI.
+
+### 12.4 Queue Viewer
+
+Should show BullMQ:
+
+* Waiting jobs
+* Active jobs
+* Completed jobs
+* Failed jobs
+* Delayed jobs
+* Retry count
+* Failure reason
+
+### 12.5 Health Page
+
+Should show:
+
+* API status
+* Worker status
+* Redis status
+* Postgres status
+* Disk usage
+* Memory usage
+* CPU usage
+* Docker container status
+
+---
+
+## 13. UI/UX Guidelines
+
+Design language:
+
+* Material Design 3
+* Material Expressive inspiration
+* Clean
+* Compact
+* Intuitive
+* Fast
+* Enterprise-grade but not cluttered
+
+UI principles:
+
+* Sidebar navigation
+* Top search/filter bar
+* Data-dense but readable tables
+* Consistent cards
+* Clear icons
+* Minimal unnecessary animation
+* Important actions visible
+* Advanced actions in menus
+* Responsive but desktop-first
+
+Main layout:
+
+```txt
+Left Sidebar
+Top Header
+Main Workspace
+Right Bottom Floating WhatsApp Chat
+```
+
+---
+
+## 14. Performance Requirements
+
+System should be optimized for speed and should not break under normal production usage.
+
+Target:
+
+* Frontend initial load under 2 seconds where possible
+* API responses under 300 ms for common actions
+* Paginated tables everywhere
+* No unbounded SELECT queries
+* No loading 100k rows into browser
+* Use indexes for frequently filtered columns
+* Use queues for all delayed/background work
+* Use Redis carefully with memory limits
+* Add log rotation
+* Add DB backup jobs
+
+For KVM 4 VPS:
+
+* Keep Postgres tuned
+* Redis memory capped
+* BullMQ concurrency controlled
+* Avoid heavy analytics on production tables without optimization
+
+---
+
+## 15. Security Requirements
+
+Security rules:
+
+* Authentication required for all app pages except login
+* Initial login should use email and password
+* Use Resend for email OTP and password reset email delivery
+* Resend API key, verified sender/domain, and from-address should be configured through environment variables or secure settings
+* There should be an account-level option to disable 2FA for all users
+* Administrators should be able to disable/enable 2FA at individual user level
+* Normal users should not be able to disable their own 2FA if admin policy requires it
+* Role-based access control
+* Field-level permission for User, Lead, and Activity
+* Audit logs for all changes
+* No public access to Postgres
+* No public access to Redis
+* Admin/ops pages must not be visible to normal Administrator users and must require separate backend-controlled custom ops login
+* Do not expose raw logs publicly
+* Mask sensitive fields where required
+* Store connector credentials securely in environment variables or encrypted config
+* Validate all webhooks
+* Rate-limit sensitive endpoints
+
+---
+
+## 16. Database Design Direction
+
+Core tables likely required:
+
+* users
+* roles
+* teams
+* sales_groups
+* permission_templates
+* permission_template_fields
+* user_custom_fields
+* user_custom_field_values
+* leads
+* lead_custom_fields
+* lead_custom_field_values
+* field_definitions
+* field_mandatory_rules
+* activities
+* activity_custom_fields
+* activity_custom_field_values
+* tasks
+* automation_workflows
+* automation_workflow_versions
+* automation_runs
+* automation_run_steps
+* automation_exit_conditions
+* automation_api_call_logs
+* assignment_rules
+* assignment_rule_conditions
+* assignment_rule_actions
+* assignment_rule_runs
+* assignment_rule_run_logs
+* connectors
+* connector_events
+* whatsapp_messages
+* whatsapp_connectors
+* whatsapp_numbers
+* whatsapp_templates
+* whatsapp_template_variables
+* whatsapp_conversations
+* whatsapp_quick_replies
+* voicebot_calls
+* voicebot_connectors
+* voicebot_trigger_templates
+* voicebot_trigger_variables
+* voicebot_webhook_mappings
+* telephony_calls
+* telephony_route_requests
+* telephony_agent_popup_events
+* telephony_call_log_events
+* uploaded_files
+* audit_logs
+* system_logs
+
+Use UUID primary keys.
+
+Use created_at and updated_at on all major tables.
+
+Use created_by and updated_by where applicable.
+
+Use JSONB for raw connector payloads and flexible metadata.
+
+---
+
+## 17. Logging Requirements
+
+Application should maintain structured logs for:
+
+* API requests
+* API errors
+* Worker jobs
+* Failed jobs
+* Connector webhooks
+* Automation executions
+* File uploads
+* Authentication events
+* Permission denied events
+
+Logs should be written to:
+
+* Docker logs for quick debugging
+* Mounted log files for persistence if needed
+
+Docker logging should have rotation configured to avoid disk filling.
+
+---
+
+## 18. File Storage Requirements
+
+Initially, store uploaded files on VPS mounted folder:
+
+```txt
+uploads/
+├── leads/
+├── documents/
+└── reports/
+```
+
+Rules:
+
+* Do not store uploaded files only inside container filesystem.
+* Use Docker volume or host-mounted folder.
+* Store file metadata in Postgres.
+* Restrict file access by role/permission.
+* Add cleanup policy for temporary files.
+
+Later, move to S3-compatible storage if volume grows.
+
+---
+
+## 19. Backup Requirements
+
+Minimum backup policy:
+
+* Daily Postgres backup
+* Retain last 7 daily backups initially
+* Store backup outside container volume
+* Use Hostinger weekly VPS backups initially as disaster recovery backup
+* Add off-server daily database backup copy later if production data becomes critical
+
+Backup script should run through cron.
+
+Need restore script also.
+
+---
+
+## 20. Development Rules for Codex
+
+Codex should follow these rules:
+
+1. Do not introduce Kubernetes.
+2. Do not introduce PM2 if Docker is used.
+3. Use Docker Compose for local/VPS orchestration.
+4. Keep services separated: frontend, backend, workers, postgres, redis.
+5. Do not expose Postgres or Redis publicly.
+6. Use pagination for all list APIs.
+7. Do not create arbitrary SQL execution pages.
+8. DB viewer must be read-only and table-whitelisted.
+9. All automation/system changes must be attributed to System user.
+10. Every module must write audit logs for create/update/delete/assignment/status changes.
+11. Long-running jobs must go through BullMQ workers.
+12. Connector webhooks must store raw payloads for debugging.
+13. UI should follow Material Design 3 / Material Expressive style.
+14. Keep UI compact and intuitive.
+15. Do not add unnecessary complexity or overengineering.
+16. Prefer clear, maintainable code over clever abstractions.
+17. Add proper error handling and logs.
+18. Make the system scalable but not overbuilt for day one.
+
+---
+
+## 21. Initial Build Phases
+
+### Phase 1: Foundation
+
+* Auth
+* Users
+* Roles
+* Teams
+* Sales groups
+* Permission templates
+* User, Lead, and Activity custom-field foundation
+* Configurable mandatory-field foundation
+* Lead module
+* Activity module
+* Task module
+* Audit logs
+* Docker deployment
+
+### Phase 2: Communication Connectors
+
+* WhatsApp connector
+* WhatsApp chat UI
+* Telephony connector
+* Call log activity
+* Click-to-call
+* Voicebot connector
+
+### Phase 3: Automation
+
+* BullMQ workers
+* Automation workflow backend
+* LeadSquared-style node-based automation builder UI
+* If/else and multi-condition nodes
+* Clone/delete node controls
+* External API call action with mail-merge from lead/activity fields
+* Workflow-level exit conditions
+* Delay/reminder jobs
+* Stop conditions
+* Automation run logs
+* Lead automation report
+
+### Phase 4: Admin Ops
+
+* Logs viewer
+* File viewer
+* Read-only DB viewer
+* Queue dashboard
+* Health dashboard
+
+### Phase 5: Optimization
+
+* Postgres indexes
+* API performance optimization
+* Redis caching where needed
+* Better monitoring
+* Backup hardening
+* Scalability improvements
+
+---
+
+## 22. Current Infrastructure Decision
+
+Use Hostinger KVM 4 VPS initially.
+
+Expected services on same VPS:
+
+* Frontend
+* Backend
+* Workers
+* Postgres
+* Redis
+* Nginx
+
+This is acceptable for initial production with around 100 users if:
+
+* DB queries are optimized
+* Tables are paginated
+* Workers have controlled concurrency
+* Logs are rotated
+* Backups are scheduled
+* Redis memory is capped
+
+---
+
+## 23. Future Scaling Direction
+
+When load increases:
+
+1. Move frontend to CDN/Vercel or keep behind Nginx.
+2. Move Postgres to managed DB or separate VPS.
+3. Move workers to separate VPS.
+4. Add object storage for files.
+5. Add monitoring stack.
+6. Consider Kubernetes only at much larger scale.
+
+Do not start with Kubernetes.
+
+---
+
+## 24. Important Open Decisions
+
+Keep this section updated.
+
+* Exact automation builder library
+* Exact Material UI package/version
+* MCUBE technical documentation and webhook payload mapping
+* Future off-server daily database backup destination, if production data becomes critical
+
+---
+
+## 25. Notes for Future Updates
+
+Whenever a decision changes, update:
+
+* Tech stack
+* Folder structure
+* DB schema direction
+* Deployment rules
+* Module requirements
+* Connector contracts
+* Automation behavior
+* Security assumptions
+
+This document should stay practical and current. Codex should not assume anything that contradicts this document.
