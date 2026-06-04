@@ -3,10 +3,9 @@
 **/dist
 **/.turbo
 **/*.tsbuildinfo
-uploads
-logs
+/uploads
+/logs
 .git
 .env
 .env.*
 npm-debug.log*
-
