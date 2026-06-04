@@ -262,13 +262,133 @@ function normalizeNodePosition(value: unknown) {
 }
 
 function autoLayoutNodes(nodes: AutomationNode[]) {
-  return nodes.map((node, index) => ({
+  return nodes.map((node, index) => {
+    const lane = node.branchPath === 'Yes' ? -1 : node.branchPath === 'No' ? 1 : 0;
+    return {
     ...node,
-    position: node.position ?? {
-      x: node.branchPath === 'Yes' ? 120 : node.branchPath === 'No' ? 560 : 340,
-      y: index * 132
+      position: {
+        x: 360 + lane * 390,
+        y: 80 + index * 126
+      }
+    };
+  });
+}
+
+function layoutWorkflowNodes(nodes: AutomationNode[], edges: WorkflowDefinitionEdge[] | AutomationEdge[]) {
+  if (nodes.length === 0) return nodes;
+  if (edges.length === 0) return autoLayoutNodes(nodes);
+
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const outgoing = new Map<string, Array<WorkflowDefinitionEdge | AutomationEdge>>();
+  const incoming = new Set<string>();
+
+  edges.forEach((edge) => {
+    const sourceId = String(edge?.sourceNodeId ?? '');
+    const targetId = String(edge?.targetNodeId ?? '');
+    if (!sourceId || !targetId || !nodeById.has(sourceId) || !nodeById.has(targetId)) return;
+    outgoing.set(sourceId, [...(outgoing.get(sourceId) ?? []), edge]);
+    incoming.add(targetId);
+  });
+
+  const roots = nodes.filter((node) => !incoming.has(node.id));
+  const rootIds = (roots.length ? roots : [nodes[0]]).map((node) => node.id);
+  const seenWidth = new Set<string>();
+  const seenPlace = new Set<string>();
+  const depthById = new Map<string, number>();
+  const laneById = new Map<string, number>();
+  const branchById = new Map<string, { branchFromId: string; branchLabel: 'Yes' | 'No'; branchRootId: string; branchPath: 'Yes' | 'No' }>();
+
+  const sortedChildren = (nodeId: string) => [...(outgoing.get(nodeId) ?? [])].sort((a, b) => {
+    const aBranch = normalizeBranchLabel(a?.label ?? a?.condition?.branch ?? a?.condition?.result);
+    const bBranch = normalizeBranchLabel(b?.label ?? b?.condition?.branch ?? b?.condition?.result);
+    if (aBranch === bBranch) return 0;
+    if (aBranch === 'Yes') return -1;
+    if (bBranch === 'Yes') return 1;
+    if (aBranch === 'No') return 1;
+    if (bBranch === 'No') return -1;
+    return 0;
+  });
+
+  const subtreeWidth = (nodeId: string): number => {
+    if (seenWidth.has(nodeId)) return 1;
+    seenWidth.add(nodeId);
+    const widths = sortedChildren(nodeId)
+      .map((edge) => String(edge.targetNodeId ?? ''))
+      .filter((targetId) => nodeById.has(targetId))
+      .map((targetId) => subtreeWidth(targetId));
+    seenWidth.delete(nodeId);
+    return Math.max(1, widths.reduce((sum, width) => sum + width, 0));
+  };
+
+  const place = (nodeId: string, depth: number, lane: number, branchRootId?: string, branchPath?: 'Yes' | 'No', branchFromId?: string, branchLabel?: 'Yes' | 'No') => {
+    if (!nodeById.has(nodeId) || seenPlace.has(nodeId)) return;
+    seenPlace.add(nodeId);
+    depthById.set(nodeId, depth);
+    laneById.set(nodeId, lane);
+    if (branchFromId && branchLabel) {
+      branchById.set(nodeId, { branchFromId, branchLabel, branchRootId: branchFromId, branchPath: branchLabel });
+    } else if (branchRootId && branchPath) {
+      branchById.set(nodeId, { branchFromId: branchRootId, branchLabel: branchPath, branchRootId, branchPath });
     }
-  }));
+
+    const children = sortedChildren(nodeId).filter((edge) => nodeById.has(String(edge.targetNodeId ?? '')));
+    if (children.length === 0) return;
+    if (children.length === 1) {
+      const edge = children[0];
+      const childId = String(edge.targetNodeId ?? '');
+      const edgeBranch = normalizeBranchLabel(edge.label ?? edge.condition?.branch ?? edge.condition?.result);
+      place(childId, depth + 1, lane, edgeBranch ? nodeId : branchRootId, edgeBranch ?? branchPath, edgeBranch ? nodeId : undefined, edgeBranch);
+      return;
+    }
+
+    const widths = children.map((edge) => subtreeWidth(String(edge.targetNodeId ?? '')));
+    const totalWidth = widths.reduce((sum, width) => sum + width, 0);
+    let cursor = lane - totalWidth / 2;
+    children.forEach((edge, index) => {
+      const childId = String(edge.targetNodeId ?? '');
+      const childLane = cursor + widths[index] / 2;
+      const edgeBranch = normalizeBranchLabel(edge.label ?? edge.condition?.branch ?? edge.condition?.result);
+      place(childId, depth + 1, childLane, edgeBranch ? nodeId : branchRootId, edgeBranch ?? branchPath, edgeBranch ? nodeId : undefined, edgeBranch);
+      cursor += widths[index];
+    });
+  };
+
+  let rootLane = 0;
+  rootIds.forEach((rootId) => {
+    const width = subtreeWidth(rootId);
+    place(rootId, 0, rootLane + width / 2 - 0.5);
+    rootLane += width + 1;
+  });
+  nodes.forEach((node) => {
+    if (!seenPlace.has(node.id)) {
+      place(node.id, (depthById.size || 0) + 1, 0);
+    }
+  });
+
+  const lanes = Array.from(laneById.values());
+  const minLane = Math.min(...lanes, 0);
+  const nodeHeight = 64;
+  const rowGap = 126;
+  const laneGap = 390;
+  return nodes
+    .map((node, index) => {
+      const branch = branchById.get(node.id);
+      const y = 80 + (depthById.get(node.id) ?? index) * rowGap;
+      return {
+        ...node,
+        ...(branch ?? {}),
+        position: {
+          x: 280 + ((laneById.get(node.id) ?? 0) - minLane) * laneGap,
+          y: Math.round(y / 2) * 2
+        }
+      };
+    })
+    .sort((a, b) => ((a.position?.y ?? 0) - (b.position?.y ?? 0)) || ((a.position?.x ?? 0) - (b.position?.x ?? 0)) || a.label.localeCompare(b.label))
+    .map((node, index, arranged) => {
+      const previous = arranged[index - 1];
+      if (!previous?.position || !node.position || Math.abs(previous.position.x - node.position.x) > 4 || node.position.y - previous.position.y >= nodeHeight + 44) return node;
+      return { ...node, position: { ...node.position, y: previous.position.y + nodeHeight + 44 } };
+    });
 }
 
 function definitionNodesToCanvasNodes(definition: any): AutomationNode[] {
@@ -284,7 +404,7 @@ function definitionNodesToCanvasNodes(definition: any): AutomationNode[] {
       ...branchMetadataForDefinitionNode(node, edges)
     }))
     .filter((node: AutomationNode): node is AutomationNode => Boolean(node.id));
-  if (baseNodes.length === 0 || edges.length === 0) return autoLayoutNodes(baseNodes);
+  if (baseNodes.length === 0) return autoLayoutNodes(baseNodes);
 
   const nodeById = new Map<string, AutomationNode>(baseNodes.map((node: AutomationNode) => [node.id, node]));
   const outgoing = new Map<string, WorkflowDefinitionEdge[]>();
@@ -335,7 +455,7 @@ function definitionNodesToCanvasNodes(definition: any): AutomationNode[] {
   baseNodes.forEach((node: AutomationNode) => {
     if (!visited.has(node.id)) ordered.push(node);
   });
-  return autoLayoutNodes(ordered);
+  return layoutWorkflowNodes(ordered, edges);
 }
 
 function buildWorkflowEdges(nodes: AutomationNode[]) {
@@ -580,6 +700,8 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
     if (!authToken || !selectedWorkflowId) return;
     setWorkflowMessage(null);
     try {
+      const nextEdges = workflowEdges.length ? workflowEdges : buildWorkflowEdges(nodes);
+      const arrangedNodes = layoutWorkflowNodes(nodes, nextEdges);
       await apiRequest(`/automation/workflows/${selectedWorkflowId}/definition`, {
         token: authToken,
         method: 'POST',
@@ -588,19 +710,21 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
           publish,
           definition: {
             exitCondition,
-            nodes: nodes.map((node, index) => ({
+            nodes: arrangedNodes.map((node) => ({
               nodeId: node.id,
               nodeType: node.type,
               label: node.label,
               config: typeof node.config === 'object' && node.config ? node.config : { summary: node.config },
-              position: node.position ?? { x: node.branchPath === 'Yes' ? 120 : node.branchPath === 'No' ? 520 : 320, y: index * 118 },
+              position: node.position,
               branchRootId: node.branchRootId,
               branchPath: node.branchPath
             })),
-            edges: workflowEdges.length ? workflowEdges : buildWorkflowEdges(nodes)
+            edges: nextEdges
           }
         })
       });
+      setNodes(arrangedNodes);
+      setWorkflowEdges(nextEdges);
       setWorkflowMessage(publish ? 'Workflow published' : 'Workflow draft saved');
       await loadWorkflows();
     } catch (error) {
@@ -672,10 +796,6 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
       type,
       label: type,
       config: defaultNodeConfig(type),
-      position: {
-        x: branchLabel === 'Yes' ? 120 : branchLabel === 'No' ? 520 : (parentNode?.position?.x ?? 320),
-        y: (parentNode?.position?.y ?? index * 118) + 118
-      },
       ...inheritedBranch,
       ...newBranch
     };
@@ -683,9 +803,9 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
       ? nodes.map((node, nodeIndex) => (node.branchRootId === parentNode.id ? nodeIndex : -1)).filter((nodeIndex) => nodeIndex >= 0)
       : [];
     const insertAt = branchIndexes.length ? Math.max(...branchIndexes) + 1 : index + 1;
-    setNodes([...nodes.slice(0, insertAt), nextNode, ...nodes.slice(insertAt)]);
-    setWorkflowEdges((currentEdges) => [
-      ...currentEdges.filter((edge) => !(edge.sourceNodeId === parentNode?.id && edge.label === 'Then')),
+    const insertedNodes = [...nodes.slice(0, insertAt), nextNode, ...nodes.slice(insertAt)];
+    const nextEdges = [
+      ...workflowEdges.filter((edge) => !(edge.sourceNodeId === parentNode?.id && edge.label === 'Then')),
       ...(parentNode ? [{
         edgeId: `edge-${parentNode.id}-${branchLabel ? branchLabel.toLowerCase() : 'then'}-${nextNode.id}`,
         sourceNodeId: parentNode.id,
@@ -693,7 +813,9 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
         label: branchLabel ?? 'Then',
         condition: branchLabel ? { branch: branchLabel.toLowerCase(), result: branchLabel === 'Yes' ? 'true' : 'false' } : {}
       }] : [])
-    ]);
+    ];
+    setNodes(layoutWorkflowNodes(insertedNodes, nextEdges));
+    setWorkflowEdges(nextEdges);
     setSelectedNodeId(nextNode.id);
   };
 

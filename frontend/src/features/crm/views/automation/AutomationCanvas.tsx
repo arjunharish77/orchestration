@@ -179,9 +179,9 @@ export function AutomationCanvas({ nodes, edges: workflowEdges = [], selectedNod
           sourceHandle: source?.type === 'If/Else' && branchLabel ? branchLabel.toLowerCase() : undefined,
           target: edge.targetNodeId,
           type: 'smoothstep',
-          label: branchLabel ?? (edge.label && edge.label !== 'Then' ? edge.label : undefined),
           markerEnd: { type: MarkerType.ArrowClosed, color: branchLabel === 'No' ? '#c78673' : '#8fb78f' },
-          style: { stroke: branchLabel === 'No' ? '#c78673' : '#8fb78f', strokeWidth: 1.8 }
+          style: { stroke: branchLabel === 'No' ? '#c78673' : '#8fb78f', strokeWidth: 1.8 },
+          zIndex: 0
         });
       });
       return edges;
@@ -198,9 +198,9 @@ export function AutomationCanvas({ nodes, edges: workflowEdges = [], selectedNod
             sourceHandle: branchLabel.toLowerCase(),
             target: branch.id,
             type: 'smoothstep',
-            label: branchLabel,
             markerEnd: { type: MarkerType.ArrowClosed, color: '#9dbb9d' },
-            style: { stroke: '#9dbb9d', strokeWidth: 1.5 }
+            style: { stroke: '#9dbb9d', strokeWidth: 1.5 },
+            zIndex: 0
           });
         });
         if (branches.length > 0) return;
@@ -215,7 +215,8 @@ export function AutomationCanvas({ nodes, edges: workflowEdges = [], selectedNod
         target: next.id,
         type: 'smoothstep',
         markerEnd: { type: MarkerType.ArrowClosed, color: '#9dbb9d' },
-        style: { stroke: '#9dbb9d', strokeWidth: 1.5 }
+        style: { stroke: '#9dbb9d', strokeWidth: 1.5 },
+        zIndex: 0
       });
     });
     return edges;

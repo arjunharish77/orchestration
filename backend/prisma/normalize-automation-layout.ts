@@ -57,6 +57,31 @@ function normalizeDefinitionLayout(definition: Prisma.JsonValue) {
   const depthById = new Map<string, number>();
   const laneById = new Map<string, number>();
   const visited = new Set<string>();
+  const measuring = new Set<string>();
+
+  function sortedEdges(currentId: string) {
+    return [...(outgoing.get(currentId) ?? [])].sort((a, b) => {
+      const aBranch = branchLabelForEdge(a);
+      const bBranch = branchLabelForEdge(b);
+      if (aBranch === bBranch) return 0;
+      if (aBranch === 'Yes') return -1;
+      if (bBranch === 'Yes') return 1;
+      if (aBranch === 'No') return 1;
+      if (bBranch === 'No') return -1;
+      return 0;
+    });
+  }
+
+  function subtreeWidth(currentId: string): number {
+    if (!currentId || measuring.has(currentId)) return 1;
+    measuring.add(currentId);
+    const widths = sortedEdges(currentId)
+      .map((edge) => String(edge.targetNodeId ?? ''))
+      .filter((targetId) => nodeIds.has(targetId))
+      .map((targetId) => subtreeWidth(targetId));
+    measuring.delete(currentId);
+    return Math.max(1, widths.reduce((sum, width) => sum + width, 0));
+  }
 
   function visit(currentId: string, depth: number, lane: number) {
     if (!currentId || visited.has(currentId)) return;
@@ -65,19 +90,21 @@ function normalizeDefinitionLayout(definition: Prisma.JsonValue) {
     depthById.set(currentId, depth);
     laneById.set(currentId, lane);
 
-    const nextEdges = [...(outgoing.get(currentId) ?? [])].sort((a, b) => {
-      const aBranch = branchLabelForEdge(a);
-      const bBranch = branchLabelForEdge(b);
-      if (aBranch === bBranch) return 0;
-      if (aBranch === 'Yes') return -1;
-      if (bBranch === 'Yes') return 1;
-      return 0;
-    });
+    const nextEdges = sortedEdges(currentId);
+    if (nextEdges.length === 1) {
+      visit(String(nextEdges[0].targetNodeId ?? ''), depth + 1, lane);
+      return;
+    }
 
+    const widths = nextEdges.map((edge) => subtreeWidth(String(edge.targetNodeId ?? '')));
+    const totalWidth = widths.reduce((sum, width) => sum + width, 0);
+    let cursor = lane - totalWidth / 2;
     nextEdges.forEach((edge, index) => {
       const branch = branchLabelForEdge(edge);
-      const nextLane = branch === 'Yes' ? lane - 1 : branch === 'No' ? lane + 1 : lane + (nextEdges.length > 1 ? index - 0.5 : 0);
+      void branch;
+      const nextLane = cursor + widths[index] / 2;
       visit(String(edge.targetNodeId ?? ''), depth + 1, nextLane);
+      cursor += widths[index];
     });
   }
 
@@ -92,6 +119,8 @@ function normalizeDefinitionLayout(definition: Prisma.JsonValue) {
   });
 
   const orderById = new Map(orderedIds.map((id, index) => [id, index]));
+  const lanes = Array.from(laneById.values());
+  const minLane = Math.min(...lanes, 0);
   const nextNodes = [...nodes].sort((a, b) => (orderById.get(nodeId(a)) ?? 0) - (orderById.get(nodeId(b)) ?? 0)).map((node, index) => {
     const id = nodeId(node);
     const branch = branchByTarget.get(id);
@@ -105,8 +134,8 @@ function normalizeDefinitionLayout(definition: Prisma.JsonValue) {
       ...rest,
       ...(branch ? { branchFromId: branch.sourceNodeId, branchLabel: branch.branchLabel, branchRootId: branch.sourceNodeId, branchPath } : {}),
       position: {
-        x: 360 + (laneById.get(id) ?? 0) * 420,
-        y: 80 + (depthById.get(id) ?? index) * 150
+        x: 280 + ((laneById.get(id) ?? 0) - minLane) * 390,
+        y: 80 + (depthById.get(id) ?? index) * 126
       }
     };
   });
