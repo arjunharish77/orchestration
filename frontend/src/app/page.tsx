@@ -1,7 +1,5 @@
-'use client';
-
-import { CrmRoute } from '../features/crm/CrmRoute';
+import { RootRedirect } from './root-redirect';
 
 export default function Home() {
-  return <CrmRoute view="leads" />;
+  return <RootRedirect />;
 }
