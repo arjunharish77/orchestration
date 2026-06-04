@@ -37,7 +37,21 @@ const routeIcons: Record<string, ReactNode> = {
 
 export function SettingsSidebar({ items, active, onChange }: { items: SettingsRouteItem[]; active: string; onChange: (value: string) => void }) {
   return (
-    <Box component="nav" aria-label="Settings sections" sx={{ position: { md: 'sticky' }, top: { md: 72 }, pr: { md: 1 }, borderRight: { md: `1px solid ${line}` } }}>
+    <Box
+      component="nav"
+      aria-label="Settings sections"
+      sx={{
+        position: { md: 'sticky' },
+        top: { md: 72 },
+        maxHeight: { md: 'calc(100dvh - 96px)' },
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        pr: { md: 1 },
+        borderRight: { md: `1px solid ${line}` },
+        scrollbarWidth: 'thin',
+        overscrollBehavior: 'contain'
+      }}
+    >
       <Stack spacing={0.2}>
         {items.map((item) => (
           <Button

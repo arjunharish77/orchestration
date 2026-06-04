@@ -7,16 +7,13 @@ import {
   Avatar,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   Paper,
   Stack,
   Tooltip,
   Typography
 } from '@mui/material';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import ReactFlow, {
   Background,
@@ -30,6 +27,7 @@ import ReactFlow, {
   type NodeProps
 } from 'reactflow';
 import { AppChip } from '../../../../components/common/AppChip';
+import { FormDialog } from '../../../../components/common/FormDialog';
 import { SectionPanel as Section } from '../../../../components/common/WorkspacePrimitives';
 
 const green = '#2d6a2d';
@@ -88,15 +86,26 @@ const automationNodeDescriptions: Record<string, string> = {
   'API Call': 'Call an external HTTP endpoint.'
 };
 
+const workflowNodeTypes = { workflowNode: WorkflowNode };
+
 export type AutomationNode = {
   id: string;
   type: string;
   label: string;
   config: Record<string, any> | string;
+  position?: { x: number; y: number };
   branchFromId?: string;
   branchLabel?: 'Yes' | 'No';
   branchRootId?: string;
   branchPath?: 'Yes' | 'No';
+};
+
+export type AutomationEdge = {
+  edgeId?: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  label?: string;
+  condition?: Record<string, unknown>;
 };
 
 export type ExitConditionConfig = {
@@ -107,6 +116,7 @@ export type ExitConditionConfig = {
 
 type AutomationCanvasProps = {
   nodes: AutomationNode[];
+  edges?: AutomationEdge[];
   selectedNodeId: string;
   exitCondition: ExitConditionConfig;
   onSelectNode: (nodeId: string) => void;
@@ -114,6 +124,8 @@ type AutomationCanvasProps = {
   onAddNode: (afterIndex: number, type: string, branchLabel?: 'Yes' | 'No') => void;
   onCloneNode: (node: AutomationNode) => void;
   onDeleteNode: (node: AutomationNode) => void;
+  onUpdateNodePosition?: (nodeId: string, position: { x: number; y: number }) => void;
+  toolbarActions?: ReactNode;
 };
 
 type WorkflowNodeData = {
@@ -128,19 +140,18 @@ type WorkflowNodeData = {
   onOpenAddNode: (afterIndex: number, branchLabel?: 'Yes' | 'No') => void;
 };
 
-export function AutomationCanvas({ nodes, selectedNodeId, exitCondition, onSelectNode, onOpenNode, onAddNode, onCloneNode, onDeleteNode }: AutomationCanvasProps) {
+export function AutomationCanvas({ nodes, edges: workflowEdges = [], selectedNodeId, exitCondition, onSelectNode, onOpenNode, onAddNode, onCloneNode, onDeleteNode, onUpdateNodePosition, toolbarActions }: AutomationCanvasProps) {
   const [addDialog, setAddDialog] = useState<{ afterIndex: number; branchLabel?: 'Yes' | 'No' } | null>(null);
   const exitConfigured = exitCondition.stopStatuses.length > 0 || exitCondition.stopDispositions.length > 0 || exitCondition.maxAttempts > 0;
-  const flowNodeTypes = useMemo(() => ({ workflowNode: WorkflowNode }), []);
   const flowNodes = useMemo<Node[]>(() => {
     return nodes.map((node, index) => {
-      const y = index * 250;
+      const y = index * 118;
+      const x = node.branchPath === 'Yes' ? 120 : node.branchPath === 'No' ? 520 : 320;
       const color = automationNodeColors[node.type] ?? green;
       return {
         id: node.id,
         type: 'workflowNode',
-        position: { x: 300, y },
-        draggable: false,
+        position: node.position ?? { x, y },
         data: {
           node,
           index,
@@ -158,6 +169,24 @@ export function AutomationCanvas({ nodes, selectedNodeId, exitCondition, onSelec
 
   const flowEdges = useMemo<Edge[]>(() => {
     const edges: Edge[] = [];
+    if (workflowEdges.length > 0) {
+      workflowEdges.forEach((edge) => {
+        const source = nodes.find((node) => node.id === edge.sourceNodeId);
+        const branchLabel = normalizeBranchLabel(edge.label ?? edge.condition?.branch ?? edge.condition?.result);
+        edges.push({
+          id: edge.edgeId ?? `edge-${edge.sourceNodeId}-${edge.targetNodeId}`,
+          source: edge.sourceNodeId,
+          sourceHandle: source?.type === 'If/Else' && branchLabel ? branchLabel.toLowerCase() : undefined,
+          target: edge.targetNodeId,
+          type: 'smoothstep',
+          label: branchLabel ?? (edge.label && edge.label !== 'Then' ? edge.label : undefined),
+          markerEnd: { type: MarkerType.ArrowClosed, color: branchLabel === 'No' ? '#c78673' : '#8fb78f' },
+          style: { stroke: branchLabel === 'No' ? '#c78673' : '#8fb78f', strokeWidth: 1.8 }
+        });
+      });
+      return edges;
+    }
+
     nodes.forEach((node, index) => {
       if (node.type === 'If/Else') {
         const branches = nodes.filter((candidate) => candidate.branchFromId === node.id && candidate.branchLabel);
@@ -190,7 +219,7 @@ export function AutomationCanvas({ nodes, selectedNodeId, exitCondition, onSelec
       });
     });
     return edges;
-  }, [nodes]);
+  }, [nodes, workflowEdges]);
 
   const closeAddDialog = () => setAddDialog(null);
   const addNodeFromDialog = (type: string) => {
@@ -201,10 +230,19 @@ export function AutomationCanvas({ nodes, selectedNodeId, exitCondition, onSelec
 
   return (
     <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
-      <Section title="Visual Workflow Builder" actions={<AppChip label={exitConfigured ? 'Exit configured' : 'No exit condition'} />}>
+      <Section
+        title="Visual Workflow Builder"
+        actions={(
+          <Stack direction="row" spacing={0.55} alignItems="center" flexWrap="wrap" useFlexGap>
+            <AppChip label={exitConfigured ? 'Exit configured' : 'No exit condition'} />
+            {toolbarActions}
+          </Stack>
+        )}
+      >
         <Box
           sx={{
-            height: { xs: 560, lg: 680 },
+            height: { xs: 620, lg: 'calc(100vh - 250px)' },
+            minHeight: 620,
             bgcolor: '#f8fcf8',
             '& .react-flow__attribution': { display: 'none' },
             '& .react-flow__node': { fontFamily: 'inherit' },
@@ -226,13 +264,14 @@ export function AutomationCanvas({ nodes, selectedNodeId, exitCondition, onSelec
           <ReactFlow
             nodes={flowNodes}
             edges={flowEdges}
-            nodeTypes={flowNodeTypes}
+            nodeTypes={workflowNodeTypes}
             fitView
-            fitViewOptions={{ padding: 0.24 }}
-            minZoom={0.45}
-            maxZoom={1.35}
-            nodesDraggable={false}
+            fitViewOptions={{ padding: 0.16 }}
+            minZoom={0.35}
+            maxZoom={1.65}
+            nodesDraggable
             nodesConnectable={false}
+            onNodeDragStop={(_, node) => onUpdateNodePosition?.(node.id, node.position)}
             panOnScroll
             proOptions={{ hideAttribution: true }}
           >
@@ -247,22 +286,15 @@ export function AutomationCanvas({ nodes, selectedNodeId, exitCondition, onSelec
           </ReactFlow>
         </Box>
       </Section>
-      <Dialog open={Boolean(addDialog)} onClose={closeAddDialog} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ pb: 0.75 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Avatar sx={{ bgcolor: green, width: 30, height: 30 }}>
-              <AddIcon fontSize="small" />
-            </Avatar>
-            <Box>
-              <Typography fontWeight={850}>Add workflow node</Typography>
-              <Typography color="text.secondary" fontSize={13}>
-                Select the next step to insert after node {(addDialog?.afterIndex ?? 0) + 1}
-                {addDialog?.branchLabel ? ` on the ${addDialog.branchLabel} path.` : '.'}
-              </Typography>
-            </Box>
-          </Stack>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 1.25 }}>
+      <FormDialog
+        open={Boolean(addDialog)}
+        onClose={closeAddDialog}
+        maxWidth="md"
+        title="Add workflow node"
+        subtitle={`Select the next step to insert after node ${(addDialog?.afterIndex ?? 0) + 1}${addDialog?.branchLabel ? ` on the ${addDialog.branchLabel} path.` : '.'}`}
+        actions={<Button onClick={closeAddDialog} variant="outlined" sx={{ borderRadius: '8px' }}>Cancel</Button>}
+      >
+        <Stack spacing={1.1}>
           <Box
             sx={{
               display: 'grid',
@@ -284,7 +316,7 @@ export function AutomationCanvas({ nodes, selectedNodeId, exitCondition, onSelec
                     gap: 1,
                     minHeight: 82,
                     p: 1,
-                    borderRadius: 1,
+                    borderRadius: '8px',
                     borderColor: line,
                     color: 'text.primary',
                     textAlign: 'left',
@@ -305,13 +337,8 @@ export function AutomationCanvas({ nodes, selectedNodeId, exitCondition, onSelec
               );
             })}
           </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 2.5, pb: 2 }}>
-          <Button onClick={closeAddDialog} variant="outlined" sx={{ borderRadius: 1 }}>
-            Cancel
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Stack>
+      </FormDialog>
     </Box>
   );
 }
@@ -327,9 +354,9 @@ function WorkflowNode({ data }: NodeProps<WorkflowNodeData>) {
         onOpen(node.id);
       }}
       sx={{
-        width: 460,
+        width: 320,
         borderRadius: 1.35,
-        p: 1,
+        p: 0.75,
         bgcolor: selected ? mutedPanel : panel,
         borderColor: selected ? color : line,
         borderLeft: `5px solid ${color}`,
@@ -362,13 +389,13 @@ function WorkflowNode({ data }: NodeProps<WorkflowNodeData>) {
       ) : null}
       <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
         <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-          <Avatar sx={{ bgcolor: color, width: 34, height: 34, fontSize: 12, fontWeight: 800 }}>{index + 1}</Avatar>
+          <Avatar sx={{ bgcolor: color, width: 28, height: 28, fontSize: 11, fontWeight: 800 }}>{index + 1}</Avatar>
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={0.65} alignItems="center" sx={{ minWidth: 0 }}>
-              <Typography fontWeight={850} noWrap>{node.label}</Typography>
+              <Typography fontWeight={850} fontSize={13} noWrap>{node.label}</Typography>
               <AppChip label={node.type} />
             </Stack>
-            <Typography color="text.secondary" fontSize={12} noWrap>{summarizeNodeConfig(node)}</Typography>
+            <Typography color="text.secondary" fontSize={11} noWrap>{summarizeNodeConfig(node)}</Typography>
           </Box>
         </Stack>
         <Stack direction="row" spacing={0.2}>
@@ -401,6 +428,13 @@ function WorkflowNode({ data }: NodeProps<WorkflowNodeData>) {
       )}
     </Paper>
   );
+}
+
+function normalizeBranchLabel(value: unknown): 'Yes' | 'No' | undefined {
+  const text = String(value ?? '').trim().toLowerCase();
+  if (['yes', 'true', 'matched', 'success'].includes(text)) return 'Yes';
+  if (['no', 'false', 'unmatched', 'else', 'otherwise'].includes(text)) return 'No';
+  return undefined;
 }
 
 function AddNextButton({
@@ -505,17 +539,82 @@ function BranchAddButton({
   );
 }
 
+const fieldLabels: Record<string, string> = {
+  'lead.status': 'Lead Status',
+  'lead.category': 'Lead Category',
+  'lead.disposition': 'Lead Disposition',
+  'lead.assignedUserId': 'Lead Owner',
+  'lead.assignedTeamId': 'Lead Team',
+  'lead.branchCode': 'Branch Code',
+  'lead.branchName': 'Branch Name',
+  'lead.preferredLanguage': 'Preferred Language',
+  'lead.offerAmount': 'Loan Offer Amount',
+  'lead.emiAmount': 'EMI Amount',
+  'lead.location': 'Customer Location',
+  status: 'Lead Status',
+  category: 'Lead Category',
+  disposition: 'Lead Disposition',
+  assignedUserId: 'Owner',
+  assignedTeamId: 'Team',
+  automationStatus: 'Automation Status',
+  partnerMapping: 'Partner Mapping'
+};
+
+const operatorLabels: Record<string, string> = {
+  equals: 'equals',
+  not_equals: 'does not equal',
+  contains: 'contains',
+  exists: 'has any value',
+  not_exists: 'is empty',
+  in: 'is one of',
+  not_in: 'is not one of',
+  gt: 'greater than',
+  gte: 'greater than or equal',
+  lt: 'less than',
+  lte: 'less than or equal'
+};
+
+function labelForField(value: unknown) {
+  const key = String(value ?? '').trim();
+  if (!key) return 'Field';
+  if (fieldLabels[key]) return fieldLabels[key];
+  return key
+    .replace(/^lead\.custom\./, '')
+    .replace(/^activity\.custom\./, '')
+    .replace(/^user\.custom\./, '')
+    .replace(/^lead\./, '')
+    .replace(/^activity\./, '')
+    .replace(/^user\./, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function summarizeNodeConfig(node: AutomationNode) {
   const config = typeof node.config === 'object' && node.config ? node.config : { summary: node.config };
   if (typeof config.summary === 'string' && config.summary.trim()) return config.summary;
   if (node.type === 'Trigger') return String(config.trigger ?? 'Lead created');
-  if (node.type === 'If/Else') return `${config.fieldPath ?? 'Field'} ${config.operator ?? 'equals'} ${config.value ?? ''}`.trim();
-  if (node.type === 'Delay') return `${config.delayMinutes ?? config.minutes ?? 15} minutes`;
+  if (node.type === 'If/Else') {
+    const conditionCount = 1 + (Array.isArray(config.groups) ? config.groups.length : 0);
+    const operator = operatorLabels[String(config.operator ?? 'equals')] ?? String(config.operator ?? 'equals').replace(/_/g, ' ');
+    const value = ['exists', 'not_exists'].includes(String(config.operator)) ? '' : ` ${String(config.value ?? '').trim()}`;
+    return `${labelForField(config.fieldPath)} ${operator}${value}${conditionCount > 1 ? ` · ${conditionCount} conditions` : ''}`.trim();
+  }
+  if (node.type === 'Delay') {
+    const unit = String(config.delayUnit ?? 'minutes');
+    return `${config.delayMinutes ?? config.minutes ?? 15} ${unit}`;
+  }
   if (node.type === 'Assignment') return config.ruleId ? 'Run selected assignment rule' : 'Run full assignment engine';
   if (node.type === 'WhatsApp') return config.templateName ?? config.templateId ?? 'WhatsApp template';
   if (node.type === 'Voicebot') return config.templateName ?? config.templateId ?? 'Voicebot trigger';
   if (node.type === 'Task') return `${config.taskType ?? 'Task'} · ${config.priority ?? 'Medium'}`;
-  if (node.type === 'Lead Update') return `${config.field ?? 'Lead field'} = ${config.value ?? ''}`.trim();
+  if (node.type === 'Lead Update') {
+    const updates = Array.isArray(config.updates) && config.updates.length ? config.updates : [{ field: config.field, value: config.value }];
+    return updates
+      .slice(0, 2)
+      .map((update: Record<string, unknown>) => `${labelForField(update.field)} = ${String(update.value ?? '-')}`)
+      .join(' · ');
+  }
   if (node.type === 'Create Activity') return `${config.type ?? 'Activity'} · ${config.title ?? 'Create activity'}`;
   if (node.type === 'API Call') return `${config.method ?? 'POST'} ${config.url ?? config.endpoint ?? 'HTTPS endpoint'}`;
   return node.type;

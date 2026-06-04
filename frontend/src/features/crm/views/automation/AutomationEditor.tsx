@@ -6,13 +6,14 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { Button, Stack } from '@mui/material';
 import { useState } from 'react';
 import { FormDialog } from '../../../../components/common/FormDialog';
-import { AutomationCanvas, AutomationNode, ExitConditionConfig } from './AutomationCanvas';
+import { AutomationCanvas, AutomationEdge, AutomationNode, ExitConditionConfig } from './AutomationCanvas';
 import { NodeInspector } from './NodeInspector';
 import { AssignmentEnginePanel } from './AssignmentEnginePanel';
 import { RunHistory } from './RunHistory';
 
 type AutomationEditorProps = {
   nodes: AutomationNode[];
+  edges?: AutomationEdge[];
   selectedNode: AutomationNode;
   selectedNodeId: string;
   nodeTypes: string[];
@@ -23,6 +24,7 @@ type AutomationEditorProps = {
   cloneSelectedNode: (node?: AutomationNode) => void;
   deleteSelectedNode: (node?: AutomationNode) => void;
   updateSelectedNode: (patch: Partial<AutomationNode>) => void;
+  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   assignmentMessage: string | null;
   assignmentForm: any;
   setAssignmentForm: (form: any) => void;
@@ -46,12 +48,28 @@ type AutomationEditorProps = {
   automationRows: ReadonlyArray<readonly [string, string, string, number]>;
   connectorOverview: any;
   mappingFields: Array<{ value: string; label: string }>;
+  optionSets: AutomationOptionSets;
   activityTypes: Array<{ code: string; label: string; isActive?: boolean }>;
   activityFieldDefinitions: Array<{ activityTypeCode?: string | null; fieldKey?: string | null; label?: string | null; moduleName?: string | null }>;
 };
 
+export type AutomationOptionSets = {
+  leadLists: {
+    status: string[];
+    category: string[];
+    disposition: string[];
+  };
+  taskLists: {
+    type: string[];
+    status: string[];
+  };
+  users: Array<{ id: string; name: string }>;
+  teams: Array<{ id: string; name: string }>;
+};
+
 export function AutomationEditor({
   nodes,
+  edges,
   selectedNode,
   selectedNodeId,
   nodeTypes,
@@ -62,6 +80,7 @@ export function AutomationEditor({
   cloneSelectedNode,
   deleteSelectedNode,
   updateSelectedNode,
+  updateNodePosition,
   assignmentMessage,
   assignmentForm,
   setAssignmentForm,
@@ -85,6 +104,7 @@ export function AutomationEditor({
   automationRows,
   connectorOverview,
   mappingFields,
+  optionSets,
   activityTypes,
   activityFieldDefinitions
 }: AutomationEditorProps) {
@@ -95,22 +115,25 @@ export function AutomationEditor({
     setSelectedNodeId(nodeId);
     setNodeDialogOpen(true);
   };
+  const toolbarActions = (
+    <>
+      <Button size="small" variant="outlined" startIcon={<SettingsIcon />} onClick={() => setNodeDialogOpen(true)} sx={{ borderRadius: 1 }}>
+        Configure Node
+      </Button>
+      <Button size="small" variant="outlined" startIcon={<AssignmentTurnedInIcon />} onClick={() => setAssignmentDialogOpen(true)} sx={{ borderRadius: 1 }}>
+        Assignment Rules
+      </Button>
+      <Button size="small" variant="outlined" startIcon={<HistoryIcon />} onClick={() => setHistoryDialogOpen(true)} sx={{ borderRadius: 1 }}>
+        Run History
+      </Button>
+    </>
+  );
 
   return (
     <Stack spacing={1}>
-      <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
-        <Button size="small" variant="outlined" startIcon={<SettingsIcon />} onClick={() => setNodeDialogOpen(true)} sx={{ borderRadius: 1 }}>
-          Configure Selected Node
-        </Button>
-        <Button size="small" variant="outlined" startIcon={<AssignmentTurnedInIcon />} onClick={() => setAssignmentDialogOpen(true)} sx={{ borderRadius: 1 }}>
-          Assignment Rules
-        </Button>
-        <Button size="small" variant="outlined" startIcon={<HistoryIcon />} onClick={() => setHistoryDialogOpen(true)} sx={{ borderRadius: 1 }}>
-          Run History
-        </Button>
-      </Stack>
       <AutomationCanvas
         nodes={nodes}
+        edges={edges}
         selectedNodeId={selectedNodeId}
         exitCondition={exitCondition}
         onSelectNode={setSelectedNodeId}
@@ -118,11 +141,13 @@ export function AutomationEditor({
         onAddNode={addNodeAfter}
         onCloneNode={cloneSelectedNode}
         onDeleteNode={deleteSelectedNode}
+        onUpdateNodePosition={updateNodePosition}
+        toolbarActions={toolbarActions}
       />
       <FormDialog open={nodeDialogOpen} title={`Configure ${selectedNode.label || selectedNode.type}`} subtitle="Edit node behavior, variable mappings, and exit conditions." onClose={() => setNodeDialogOpen(false)} maxWidth="lg" actions={[
         <Button key="close" variant="contained" onClick={() => setNodeDialogOpen(false)}>Done</Button>
       ]}>
-        <NodeInspector selectedNode={selectedNode} nodeTypes={nodeTypes} exitCondition={exitCondition} setExitCondition={setExitCondition} updateSelectedNode={updateSelectedNode} cloneSelectedNode={cloneSelectedNode} deleteSelectedNode={deleteSelectedNode} assignmentRules={assignmentRules} connectorOverview={connectorOverview} mappingFields={mappingFields} activityTypes={activityTypes} activityFieldDefinitions={activityFieldDefinitions} />
+        <NodeInspector selectedNode={selectedNode} nodeTypes={nodeTypes} exitCondition={exitCondition} setExitCondition={setExitCondition} updateSelectedNode={updateSelectedNode} cloneSelectedNode={cloneSelectedNode} deleteSelectedNode={deleteSelectedNode} assignmentRules={assignmentRules} connectorOverview={connectorOverview} mappingFields={mappingFields} optionSets={optionSets} activityTypes={activityTypes} activityFieldDefinitions={activityFieldDefinitions} />
       </FormDialog>
       <FormDialog open={assignmentDialogOpen} title="Assignment Rules" subtitle="Configure assignment rules used by assignment nodes." onClose={() => setAssignmentDialogOpen(false)} maxWidth="lg" actions={[
         <Button key="close" variant="contained" onClick={() => setAssignmentDialogOpen(false)}>Done</Button>

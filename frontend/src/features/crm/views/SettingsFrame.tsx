@@ -22,7 +22,7 @@ export function SettingsFrame({ routes, active, onChange, onRefresh, message, ch
 
   return (
     <Stack spacing={1.25}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '280px 1fr' }, gap: { xs: 1.1, md: 1.8 }, alignItems: 'start' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '280px minmax(0, 1fr)' }, gap: { xs: 1.1, md: 1.8 }, alignItems: 'start', minWidth: 0 }}>
         <SettingsSidebar items={routes} active={active} onChange={onChange} />
         <Paper
           variant="outlined"
@@ -31,7 +31,7 @@ export function SettingsFrame({ routes, active, onChange, onRefresh, message, ch
             borderRadius: 1,
             borderColor: line,
             bgcolor: alpha(panel, 0.78),
-            overflow: 'hidden',
+            overflow: 'clip',
             boxShadow: '0 10px 26px rgba(22, 39, 22, 0.035)'
           }}
         >

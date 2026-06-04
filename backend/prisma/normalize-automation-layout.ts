@@ -30,6 +30,18 @@ function normalizeDefinitionLayout(definition: Prisma.JsonValue) {
   const record = definition as Record<string, unknown>;
   const nodes = Array.isArray(record.nodes) ? record.nodes.filter((node): node is NodeRow => Boolean(node && typeof node === 'object' && !Array.isArray(node))) : [];
   const edges = Array.isArray(record.edges) ? record.edges.filter((edge): edge is EdgeRow => Boolean(edge && typeof edge === 'object' && !Array.isArray(edge))) : [];
+  const nodeIds = new Set(nodes.map(nodeId).filter(Boolean));
+  const outgoing = new Map<string, EdgeRow[]>();
+  const incomingTargets = new Set<string>();
+
+  edges.forEach((edge) => {
+    const sourceNodeId = String(edge.sourceNodeId ?? '');
+    const targetNodeId = String(edge.targetNodeId ?? '');
+    if (!sourceNodeId || !targetNodeId || !nodeIds.has(sourceNodeId) || !nodeIds.has(targetNodeId)) return;
+    outgoing.set(sourceNodeId, [...(outgoing.get(sourceNodeId) ?? []), edge]);
+    incomingTargets.add(targetNodeId);
+  });
+
   const branchByTarget = new Map<string, { sourceNodeId: string; branchLabel: 'Yes' | 'No' }>();
   edges.forEach((edge) => {
     const sourceNodeId = String(edge.sourceNodeId ?? '');
@@ -40,7 +52,47 @@ function normalizeDefinitionLayout(definition: Prisma.JsonValue) {
     }
   });
 
-  const nextNodes = nodes.map((node, index) => {
+  const rootNode = nodes.find((node) => !incomingTargets.has(nodeId(node))) ?? nodes[0];
+  const orderedIds: string[] = [];
+  const depthById = new Map<string, number>();
+  const laneById = new Map<string, number>();
+  const visited = new Set<string>();
+
+  function visit(currentId: string, depth: number, lane: number) {
+    if (!currentId || visited.has(currentId)) return;
+    visited.add(currentId);
+    orderedIds.push(currentId);
+    depthById.set(currentId, depth);
+    laneById.set(currentId, lane);
+
+    const nextEdges = [...(outgoing.get(currentId) ?? [])].sort((a, b) => {
+      const aBranch = branchLabelForEdge(a);
+      const bBranch = branchLabelForEdge(b);
+      if (aBranch === bBranch) return 0;
+      if (aBranch === 'Yes') return -1;
+      if (bBranch === 'Yes') return 1;
+      return 0;
+    });
+
+    nextEdges.forEach((edge, index) => {
+      const branch = branchLabelForEdge(edge);
+      const nextLane = branch === 'Yes' ? lane - 1 : branch === 'No' ? lane + 1 : lane + (nextEdges.length > 1 ? index - 0.5 : 0);
+      visit(String(edge.targetNodeId ?? ''), depth + 1, nextLane);
+    });
+  }
+
+  visit(nodeId(rootNode), 0, 0);
+  nodes.forEach((node) => {
+    const id = nodeId(node);
+    if (!visited.has(id)) {
+      orderedIds.push(id);
+      depthById.set(id, orderedIds.length);
+      laneById.set(id, 0);
+    }
+  });
+
+  const orderById = new Map(orderedIds.map((id, index) => [id, index]));
+  const nextNodes = [...nodes].sort((a, b) => (orderById.get(nodeId(a)) ?? 0) - (orderById.get(nodeId(b)) ?? 0)).map((node, index) => {
     const id = nodeId(node);
     const branch = branchByTarget.get(id);
     const branchPath = branch?.branchLabel;
@@ -53,8 +105,8 @@ function normalizeDefinitionLayout(definition: Prisma.JsonValue) {
       ...rest,
       ...(branch ? { branchFromId: branch.sourceNodeId, branchLabel: branch.branchLabel, branchRootId: branch.sourceNodeId, branchPath } : {}),
       position: {
-        x: branchPath === 'Yes' ? 120 : branchPath === 'No' ? 560 : 340,
-        y: index * 132
+        x: 360 + (laneById.get(id) ?? 0) * 420,
+        y: 80 + (depthById.get(id) ?? index) * 150
       }
     };
   });

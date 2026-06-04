@@ -116,13 +116,13 @@ async function upsertVoicebotTemplate() {
   const connector = await prisma.voicebotConnector.upsert({
     where: { id: 'indus-voicebot-connector' },
     update: {
-      name: 'Indus Loan Voicebot Connector',
+      name: 'Loan Voicebot Connector',
       isActive: false,
       config: { executionEnabled: false, note: 'Configure provider URL and credentials from the connector UI before production use.' }
     },
     create: {
       id: 'indus-voicebot-connector',
-      name: 'Indus Loan Voicebot Connector',
+      name: 'Loan Voicebot Connector',
       isActive: false,
       config: { executionEnabled: false, note: 'Configure provider URL and credentials from the connector UI before production use.' }
     }
@@ -131,9 +131,9 @@ async function upsertVoicebotTemplate() {
     where: { id: 'indus-loan-offer-voicebot' },
     update: {
       connectorId: connector.id,
-      name: 'Indus Loan Offer Voicebot',
+      name: 'Loan Offer Voicebot',
       method: 'POST',
-      url: 'https://voicebot.example.com/indus-loan/calls',
+      url: 'https://voicebot.example.com/loan-offer/calls',
       headers: { Authorization: '{{voicebotToken}}' },
       bodyTemplate: {
         customerName: '{{customerName}}',
@@ -149,9 +149,9 @@ async function upsertVoicebotTemplate() {
     create: {
       id: 'indus-loan-offer-voicebot',
       connectorId: connector.id,
-      name: 'Indus Loan Offer Voicebot',
+      name: 'Loan Offer Voicebot',
       method: 'POST',
-      url: 'https://voicebot.example.com/indus-loan/calls',
+      url: 'https://voicebot.example.com/loan-offer/calls',
       headers: { Authorization: '{{voicebotToken}}' },
       bodyTemplate: {
         customerName: '{{customerName}}',
@@ -177,7 +177,7 @@ async function upsertVoicebotTemplate() {
   return template;
 }
 
-async function upsertIndusAssignmentRule() {
+async function upsertAssignmentRule() {
   const fallbackTeam = await prisma.team.findFirst({
     where: { isActive: true, code: 'DEFAULT' },
     orderBy: { createdAt: 'asc' }
@@ -188,14 +188,14 @@ async function upsertIndusAssignmentRule() {
   const rule = await prisma.assignmentRule.upsert({
     where: { id: 'indus-branch-assignment-rule' },
     update: {
-      name: 'Indus Branch / Partner Assignment',
+      name: 'Branch / Partner Assignment',
       priority: 20,
       targetType: 'Lead',
       isActive: true
     },
     create: {
       id: 'indus-branch-assignment-rule',
-      name: 'Indus Branch / Partner Assignment',
+      name: 'Branch / Partner Assignment',
       priority: 20,
       targetType: 'Lead',
       isActive: true
@@ -312,7 +312,7 @@ function offerJourneyDefinition(templateIds: Record<string, string>, voicebotTem
         taskType: 'Callback',
         priority: 'High',
         dueInDays: 1,
-        remarks: 'Follow up Indus loan offer for {{lead.customerName}}. Offer amount: {{lead.offerAmount}}.'
+        remarks: 'Follow up loan offer for {{lead.customerName}}. Offer amount: {{lead.offerAmount}}.'
       }),
       node('pause_human', 'Pause', 'Pause For Human Follow-up', { reason: 'assigned_to_partner' }),
       node('stop_not_eligible', 'Stop', 'Stop Journey', { reason: 'lead_not_eligible_or_closed' })
@@ -477,7 +477,7 @@ function callbackDefinition(templateIds: Record<string, string>): WorkflowDefini
         taskType: 'Callback',
         priority: 'High',
         dueInDays: 1,
-        remarks: 'Callback scheduled for {{lead.customerName}} from Indus loan journey.'
+        remarks: 'Callback scheduled for {{lead.customerName}} from the loan journey.'
       }),
       node('pause_callback', 'Pause', 'Pause Until Callback', { reason: 'callback_scheduled' }),
       node('stop_no_callback', 'Stop', 'No Callback Needed', { reason: 'callback_not_requested' })
@@ -501,22 +501,22 @@ function smokeDefinition(): WorkflowDefinition {
       node('mark_smoke', 'Lead Update', 'Mark Smoke Qualified', leadUpdateConfig([
           { field: 'status', value: 'Assigned' },
           { field: 'category', value: 'Callback Requested' },
-          { field: 'automationStatus', value: 'Smoke Tested' }
+          { field: 'automationStatus', value: 'Workflow Tested' }
       ])),
-      node('create_task', 'Task', 'Create Smoke Follow-up Task', {
+      node('create_task', 'Task', 'Create Workflow Test Task', {
         taskType: 'Callback',
         priority: 'Medium',
         dueInDays: 1,
-        remarks: 'Smoke test callback for {{lead.customerName}}.'
+        remarks: 'Workflow test callback for {{lead.customerName}}.'
       }),
-      node('create_activity', 'Create Activity', 'Log Smoke Activity', {
+      node('create_activity', 'Create Activity', 'Log Workflow Test Activity', {
         type: '008',
-        title: 'Indus automation smoke completed',
-        notes: 'Smoke workflow completed for {{lead.customerName}}.'
+        title: 'Automation test completed',
+        notes: 'Workflow test completed for {{lead.customerName}}.'
       }),
       node('notify', 'Notify', 'Notify Agent', {
-        title: 'Indus smoke workflow completed',
-        message: 'Automation smoke workflow completed for {{lead.customerName}}.'
+        title: 'Workflow test completed',
+        message: 'Automation test workflow completed for {{lead.customerName}}.'
       }),
       node('stop_smoke', 'Stop', 'Stop Smoke Workflow', { reason: 'smoke_completed' }),
       node('stop_no_branch', 'Stop', 'Stop Missing Branch', { reason: 'branch_mapping_missing' })
@@ -538,9 +538,9 @@ async function upsertSmokeLead() {
   return prisma.lead.upsert({
     where: { id: 'indus-smoke-lead-001' },
     update: {
-      customerName: 'Indus Smoke Customer',
+      customerName: 'Workflow Test Customer',
       mobile: '9000000001',
-      externalLeadId: 'INDUS-SMOKE-001',
+      externalLeadId: 'WORKFLOW-SMOKE-001',
       branchCode: team?.code ?? 'DEFAULT',
       branchName: team?.name ?? 'Default Team',
       teamId: team?.id,
@@ -558,9 +558,9 @@ async function upsertSmokeLead() {
     },
     create: {
       id: 'indus-smoke-lead-001',
-      customerName: 'Indus Smoke Customer',
+      customerName: 'Workflow Test Customer',
       mobile: '9000000001',
-      externalLeadId: 'INDUS-SMOKE-001',
+      externalLeadId: 'WORKFLOW-SMOKE-001',
       branchCode: team?.code ?? 'DEFAULT',
       branchName: team?.name ?? 'Default Team',
       teamId: team?.id,
@@ -587,7 +587,7 @@ async function runSmokeWorkflow(leadId: string) {
   const result = await processAutomationRun({
     data: {
       workflowId: 'indus-automation-smoke-immediate',
-      input: { leadId, useDraft: false, runLabel: 'Indus Seed Smoke' },
+      input: { leadId, useDraft: false, runLabel: 'Seed Workflow Test' },
       actor: systemActor
     }
   });
@@ -605,8 +605,8 @@ async function main() {
 
   const offer = await upsertWhatsAppTemplate({
     id: 'indus-wa-loan-offer',
-    name: 'Indus Loan Offer',
-    content: 'Hi {{customerName}}, Reliance Indus has a loan offer of Rs {{offerAmount}} for you. Estimated EMI: Rs {{emiAmount}}. Reply Apply Now, Interested, Need Help, Callback, or Not Interested.',
+    name: 'Loan Offer',
+    content: 'Hi {{customerName}}, you have a loan offer of Rs {{offerAmount}}. Estimated EMI: Rs {{emiAmount}}. Reply Apply Now, Interested, Need Help, Callback, or Not Interested.',
     variables: [
       { key: 'customerName', displayName: 'Customer Name', defaultMapping: 'lead.customerName' },
       { key: 'offerAmount', displayName: 'Loan Offer Amount', defaultMapping: 'lead.offerAmount' },
@@ -617,8 +617,8 @@ async function main() {
   });
   const reminder = await upsertWhatsAppTemplate({
     id: 'indus-wa-loan-reminder',
-    name: 'Indus Loan Reminder',
-    content: 'Hi {{customerName}}, reminder: your Reliance Indus loan offer of Rs {{offerAmount}} is still available until {{expiryDate}}. Reply Interested or Callback for help.',
+    name: 'Loan Reminder',
+    content: 'Hi {{customerName}}, reminder: your loan offer of Rs {{offerAmount}} is still available until {{expiryDate}}. Reply Interested or Callback for help.',
     variables: [
       { key: 'customerName', displayName: 'Customer Name', defaultMapping: 'lead.customerName' },
       { key: 'offerAmount', displayName: 'Loan Offer Amount', defaultMapping: 'lead.offerAmount' },
@@ -627,7 +627,7 @@ async function main() {
   });
   const followup = await upsertWhatsAppTemplate({
     id: 'indus-wa-loan-followup',
-    name: 'Indus Loan Follow-up',
+    name: 'Loan Follow-up',
     content: 'Hi {{customerName}}, our {{branchName}} team can help complete your loan offer before {{expiryDate}}. Reply Callback to speak to an agent.',
     variables: [
       { key: 'customerName', displayName: 'Customer Name', defaultMapping: 'lead.customerName' },
@@ -637,26 +637,27 @@ async function main() {
   });
   const callback = await upsertWhatsAppTemplate({
     id: 'indus-wa-callback-confirmation',
-    name: 'Indus Callback Confirmation',
-    content: 'Thanks {{customerName}}. A Reliance Indus partner from {{branchName}} will call you for the loan offer follow-up.',
+    name: 'Callback Confirmation',
+    content: 'Thanks {{customerName}}. A partner from {{branchName}} will call you for the loan offer follow-up.',
     variables: [
       { key: 'customerName', displayName: 'Customer Name', defaultMapping: 'lead.customerName' },
       { key: 'branchName', displayName: 'Branch Name', defaultMapping: 'lead.branchName' }
     ]
   });
   const voicebot = await upsertVoicebotTemplate();
-  const assignmentRule = await upsertIndusAssignmentRule();
+  const assignmentRule = await upsertAssignmentRule();
   const templateIds = { offer: offer.id, reminder: reminder.id, followup: followup.id, callback: callback.id };
 
-  await upsertWorkflow('indus-loan-upload-offer-journey', 'Indus Loan Upload To Conversion Journey', 'Lead upload to WhatsApp offer, reminder, voicebot, partner assignment, and human follow-up.', offerJourneyDefinition(templateIds, voicebot.id));
-  await upsertWorkflow('indus-whatsapp-positive-response-routing', 'Indus WhatsApp Positive Response Routing', 'Routes interested WhatsApp respondents to partner assignment and callback task.', positiveResponseDefinition(templateIds));
-  await upsertWorkflow('indus-voicebot-intent-routing', 'Indus Voicebot Intent Routing', 'Routes voicebot intent/disposition outcomes into warm follow-up or closed buckets.', voicebotIntentDefinition());
-  await upsertWorkflow('indus-offer-expiry-cleanup', 'Indus Offer Expiry Cleanup', 'Marks expired loan offers and logs expiry activity.', expiryDefinition());
-  await upsertWorkflow('indus-callback-request-followup', 'Indus Callback Request Follow-up', 'Confirms callback requests and schedules a human follow-up task.', callbackDefinition(templateIds));
-  await upsertWorkflow('indus-automation-smoke-immediate', 'Indus Automation Smoke - Immediate', 'Immediate non-provider smoke workflow used to validate core automation nodes.', smokeDefinition());
+  await upsertWorkflow('indus-loan-upload-offer-journey', 'Loan Upload To Conversion Journey', 'Lead upload to WhatsApp offer, reminder, voicebot, partner assignment, and human follow-up.', offerJourneyDefinition(templateIds, voicebot.id));
+  await upsertWorkflow('indus-whatsapp-positive-response-routing', 'WhatsApp Positive Response Routing', 'Routes interested WhatsApp respondents to partner assignment and callback task.', positiveResponseDefinition(templateIds));
+  await upsertWorkflow('indus-voicebot-intent-routing', 'Voicebot Intent Routing', 'Routes voicebot intent/disposition outcomes into warm follow-up or closed buckets.', voicebotIntentDefinition());
+  await upsertWorkflow('indus-offer-expiry-cleanup', 'Offer Expiry Cleanup', 'Marks expired loan offers and logs expiry activity.', expiryDefinition());
+  await upsertWorkflow('indus-callback-request-followup', 'Callback Request Follow-up', 'Confirms callback requests and schedules a human follow-up task.', callbackDefinition(templateIds));
+  await upsertWorkflow('indus-automation-smoke-immediate', 'Automation Smoke - Immediate', 'Immediate non-provider smoke workflow used to validate core automation nodes.', smokeDefinition());
 
   const smokeLead = await upsertSmokeLead();
-  const smokeResult = process.env.RUN_INDUS_AUTOMATION_SMOKE === 'false'
+  const shouldRunSmoke = process.env.RUN_AUTOMATION_SEED_SMOKE ?? 'true';
+  const smokeResult = shouldRunSmoke === 'false'
     ? { skipped: true }
     : await runSmokeWorkflow(smokeLead.id);
 

@@ -5,14 +5,17 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Box, Button, Checkbox, FormControl, ListItemText, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MessageAlert } from '../../../components/common/MessageAlert';
+import { FormDialog } from '../../../components/common/FormDialog';
+import { AppChip } from '../../../components/common/AppChip';
 import { ModuleShell } from '../../../components/common/WorkspacePrimitives';
 import { apiRequest } from '../../../lib/api';
 import { formatDate, humanizeKey } from '../../../lib/format';
 import { toLeadRows } from '../types/lead';
-import { AutomationNode, ExitConditionConfig } from './automation/AutomationCanvas';
-import { AutomationEditor } from './automation/AutomationEditor';
+import { AutomationEdge, AutomationNode, ExitConditionConfig } from './automation/AutomationCanvas';
+import { AutomationEditor, type AutomationOptionSets } from './automation/AutomationEditor';
 import { AutomationList } from './automation/AutomationList';
 import { AutomationMetrics } from './automation/AutomationMetrics';
+import { defaultLeadLists, defaultTaskLists } from './settings/settings-utils';
 
 const assignmentFieldLabels: Record<string, string> = {
   'lead.branchCode': 'Branch Code',
@@ -81,6 +84,14 @@ type WorkflowRunDetail = {
   steps?: WorkflowRunStep[];
 };
 
+type WorkflowDefinitionEdge = {
+  edgeId?: string | null;
+  sourceNodeId?: string | null;
+  targetNodeId?: string | null;
+  label?: string | null;
+  condition?: Record<string, unknown> | null;
+};
+
 type CustomFieldDefinition = {
   moduleName?: string | null;
   activityTypeCode?: string | null;
@@ -107,10 +118,20 @@ function createInitialAutomationNodes(): AutomationNode[] {
   ];
 }
 
+function createInitialAutomationEdges(): AutomationEdge[] {
+  return [];
+}
+
 const defaultExitCondition: ExitConditionConfig = {
   stopStatuses: ['Converted', 'Expired'],
   stopDispositions: ['Not Interested', 'Wrong Number'],
   maxAttempts: 0
+};
+const defaultAutomationOptionSets: AutomationOptionSets = {
+  leadLists: defaultLeadLists,
+  taskLists: defaultTaskLists,
+  users: [],
+  teams: []
 };
 
 function createDefaultExitCondition(): ExitConditionConfig {
@@ -180,7 +201,7 @@ function normalizeCustomFieldDefinitions(payload: unknown): CustomFieldDefinitio
 function defaultNodeConfig(type: string) {
   if (type === 'Trigger') return { trigger: 'Lead created' };
   if (type === 'If/Else') return { fieldPath: 'lead.status', operator: 'equals', value: 'New', branchMode: 'all', groups: [] };
-  if (type === 'Delay') return { delayMinutes: 15 };
+  if (type === 'Delay') return { delayMinutes: 15, delayUnit: 'minutes' };
   if (type === 'Assignment') return { mode: 'full_engine', ruleId: '' };
   if (type === 'WhatsApp') return { templateId: '', variableMapping: {} };
   if (type === 'Voicebot') return { templateId: '', variableMapping: {} };
@@ -198,9 +219,27 @@ function defaultNodeConfig(type: string) {
 
 function normalizeBranchLabel(value: unknown): 'Yes' | 'No' | undefined {
   const text = String(value ?? '').trim().toLowerCase();
-  if (['yes', 'true', 'matched', 'then', 'success'].includes(text)) return 'Yes';
+  if (['yes', 'true', 'matched', 'success'].includes(text)) return 'Yes';
   if (['no', 'false', 'unmatched', 'else', 'otherwise'].includes(text)) return 'No';
   return undefined;
+}
+
+function normalizeDefinitionEdges(definition: any): AutomationEdge[] {
+  const rawEdges: WorkflowDefinitionEdge[] = Array.isArray(definition?.edges) ? definition.edges : [];
+  return rawEdges
+    .map<AutomationEdge | null>((edge, index) => {
+      const sourceNodeId = String(edge?.sourceNodeId ?? '');
+      const targetNodeId = String(edge?.targetNodeId ?? '');
+      if (!sourceNodeId || !targetNodeId) return null;
+      return {
+        edgeId: String(edge?.edgeId ?? `edge-${sourceNodeId}-${targetNodeId}-${index}`),
+        sourceNodeId,
+        targetNodeId,
+        label: String(edge?.label ?? 'Then'),
+        condition: edge?.condition && typeof edge.condition === 'object' ? edge.condition : {}
+      } satisfies AutomationEdge;
+    })
+    .filter((edge): edge is AutomationEdge => Boolean(edge));
 }
 
 function branchMetadataForDefinitionNode(node: any, edges: any[]) {
@@ -212,6 +251,91 @@ function branchMetadataForDefinitionNode(node: any, edges: any[]) {
     ...(branchRootId && branchPath ? { branchRootId, branchPath } : {}),
     ...(branchLabel ? { branchFromId: incomingBranch.sourceNodeId, branchLabel, branchRootId: incomingBranch.sourceNodeId, branchPath: branchLabel } : {})
   };
+}
+
+function normalizeNodePosition(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const position = value as Record<string, unknown>;
+  const x = Number(position.x);
+  const y = Number(position.y);
+  return Number.isFinite(x) && Number.isFinite(y) && x >= 40 && y >= 0 ? { x, y } : undefined;
+}
+
+function autoLayoutNodes(nodes: AutomationNode[]) {
+  return nodes.map((node, index) => ({
+    ...node,
+    position: node.position ?? {
+      x: node.branchPath === 'Yes' ? 120 : node.branchPath === 'No' ? 560 : 340,
+      y: index * 132
+    }
+  }));
+}
+
+function definitionNodesToCanvasNodes(definition: any): AutomationNode[] {
+  const rawNodes = Array.isArray(definition?.nodes) ? definition.nodes : [];
+  const edges: WorkflowDefinitionEdge[] = Array.isArray(definition?.edges) ? definition.edges : [];
+  const baseNodes: AutomationNode[] = rawNodes
+    .map((node: any) => ({
+      id: String(node.id ?? node.nodeId ?? ''),
+      type: String(node.type ?? node.nodeType ?? 'Task'),
+      label: String(node.label ?? node.type ?? node.nodeType ?? 'Node'),
+      config: node.config ?? {},
+      position: normalizeNodePosition(node.position),
+      ...branchMetadataForDefinitionNode(node, edges)
+    }))
+    .filter((node: AutomationNode): node is AutomationNode => Boolean(node.id));
+  if (baseNodes.length === 0 || edges.length === 0) return autoLayoutNodes(baseNodes);
+
+  const nodeById = new Map<string, AutomationNode>(baseNodes.map((node: AutomationNode) => [node.id, node]));
+  const outgoing = new Map<string, WorkflowDefinitionEdge[]>();
+  const incomingTargets = new Set<string>();
+  edges.forEach((edge: WorkflowDefinitionEdge) => {
+    const sourceId = String(edge?.sourceNodeId ?? '');
+    const targetId = String(edge?.targetNodeId ?? '');
+    if (!sourceId || !targetId) return;
+    outgoing.set(sourceId, [...(outgoing.get(sourceId) ?? []), edge]);
+    incomingTargets.add(targetId);
+  });
+
+  const first = baseNodes.find((node: AutomationNode) => !incomingTargets.has(node.id)) ?? baseNodes[0];
+  const ordered: AutomationNode[] = [];
+  const visited = new Set<string>();
+  const visit = (nodeId: string, branchRootId?: string, branchPath?: 'Yes' | 'No', branchFromId?: string, branchLabel?: 'Yes' | 'No') => {
+    const node = nodeById.get(nodeId);
+    if (!node || visited.has(nodeId)) return;
+    visited.add(nodeId);
+    ordered.push({
+      ...node,
+      ...(branchRootId && branchPath ? { branchRootId, branchPath } : {}),
+      ...(branchFromId && branchLabel ? { branchFromId, branchLabel, branchRootId: branchFromId, branchPath: branchLabel } : {})
+    });
+
+    const nextEdges = [...(outgoing.get(nodeId) ?? [])].sort((a: WorkflowDefinitionEdge, b: WorkflowDefinitionEdge) => {
+      const aBranch = normalizeBranchLabel(a?.label ?? a?.condition?.branch ?? a?.condition?.result);
+      const bBranch = normalizeBranchLabel(b?.label ?? b?.condition?.branch ?? b?.condition?.result);
+      if (aBranch === bBranch) return 0;
+      if (aBranch === 'Yes') return -1;
+      if (bBranch === 'Yes') return 1;
+      return 0;
+    });
+    nextEdges.forEach((edge: WorkflowDefinitionEdge) => {
+      const targetId = String(edge?.targetNodeId ?? '');
+      const edgeBranch = normalizeBranchLabel(edge?.label ?? edge?.condition?.branch ?? edge?.condition?.result);
+      visit(
+        targetId,
+        edgeBranch ? nodeId : branchRootId,
+        edgeBranch ?? branchPath,
+        edgeBranch ? nodeId : undefined,
+        edgeBranch
+      );
+    });
+  };
+
+  visit(first.id);
+  baseNodes.forEach((node: AutomationNode) => {
+    if (!visited.has(node.id)) ordered.push(node);
+  });
+  return autoLayoutNodes(ordered);
 }
 
 function buildWorkflowEdges(nodes: AutomationNode[]) {
@@ -232,10 +356,10 @@ function buildWorkflowEdges(nodes: AutomationNode[]) {
       if (branches.length > 0) return;
     }
     const next = nodes[index + 1];
-      if (!next || next.branchFromId) return;
-      if (node.branchRootId && next.branchRootId === node.branchRootId && node.branchPath !== next.branchPath) return;
-      if (node.branchRootId && !next.branchRootId) return;
-      edges.push({ edgeId: `edge-${node.id}-${next.id}`, sourceNodeId: node.id, targetNodeId: next.id, label: 'Then' });
+    if (!next || next.branchFromId) return;
+    if (node.branchRootId && next.branchRootId === node.branchRootId && node.branchPath !== next.branchPath) return;
+    if (node.branchRootId && !next.branchRootId) return;
+    edges.push({ edgeId: `edge-${node.id}-${next.id}`, sourceNodeId: node.id, targetNodeId: next.id, label: 'Then' });
   });
   return edges;
 }
@@ -263,6 +387,7 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
   const [builderMode, setBuilderMode] = useState(false);
   const [workflowsLoading, setWorkflowsLoading] = useState(false);
   const [nodes, setNodes] = useState<AutomationNode[]>(createInitialAutomationNodes);
+  const [workflowEdges, setWorkflowEdges] = useState<AutomationEdge[]>(createInitialAutomationEdges);
   const [selectedNodeId, setSelectedNodeId] = useState('trigger');
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState('');
@@ -281,11 +406,13 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
   const [assignmentPreview, setAssignmentPreview] = useState<any>(null);
   const [assignmentMessage, setAssignmentMessage] = useState<string | null>(null);
   const [connectorOverview, setConnectorOverview] = useState<any>({});
+  const [automationOptionSets, setAutomationOptionSets] = useState<AutomationOptionSets>(defaultAutomationOptionSets);
   const [mappingFieldDefinitions, setMappingFieldDefinitions] = useState<CustomFieldDefinition[]>([]);
   const [activityTypes, setActivityTypes] = useState<ActivityTypeConfig[]>([]);
   const [leadRows, setLeadRows] = useState<LeadRow[]>([]);
   const [automationRows, setAutomationRows] = useState<AutomationRunRow[]>(initialAutomationRows);
   const [scheduledJobs, setScheduledJobs] = useState<any[]>([]);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? nodes[0];
   const nodeTypes = ['If/Else', 'Delay', 'Assignment', 'WhatsApp', 'Voicebot', 'Task', 'Lead Update', 'Create Activity', 'Mark Expired', 'Notify', 'Stop', 'Pause', 'Resume', 'API Call'];
   const automationSummary = useMemo<Array<[string, string]>>(() => {
@@ -386,20 +513,22 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
 
   useEffect(() => {
     const workflow = workflows.find((item) => item.id === selectedWorkflowId);
+    if (selectedWorkflowId && workflows.length > 0 && !workflow) {
+      setSelectedWorkflowId('');
+      setNodes(createInitialAutomationNodes());
+      setWorkflowEdges(createInitialAutomationEdges());
+      setSelectedNodeId('trigger');
+      setExitCondition(createDefaultExitCondition());
+      return;
+    }
     const definition = workflow?.versions?.[0]?.definition;
     if (!definition || !Array.isArray(definition.nodes) || definition.nodes.length === 0) return;
-    const edges = Array.isArray(definition.edges) ? definition.edges : [];
-    const nextNodes = definition.nodes.map((node: any) => ({
-      id: node.id ?? node.nodeId,
-      type: node.type ?? node.nodeType ?? 'Task',
-      label: node.label ?? node.type ?? node.nodeType ?? 'Node',
-      config: node.config ?? {},
-      ...branchMetadataForDefinitionNode(node, edges)
-    })).filter((node: AutomationNode) => node.id);
+    const nextNodes = definitionNodesToCanvasNodes(definition);
     if (nextNodes.length) {
       setNodes(nextNodes);
       setSelectedNodeId(nextNodes[0].id);
     }
+    setWorkflowEdges(normalizeDefinitionEdges(definition));
     setExitCondition(normalizeExitCondition(definition.exitCondition));
   }, [selectedWorkflowId, workflows]);
 
@@ -434,6 +563,7 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
     setSelectedWorkflowId('');
     setNewWorkflowName('');
     setNodes(createInitialAutomationNodes());
+    setWorkflowEdges(createInitialAutomationEdges());
     setSelectedNodeId('trigger');
     setExitCondition(createDefaultExitCondition());
     setBuilderMode(true);
@@ -463,11 +593,11 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
               nodeType: node.type,
               label: node.label,
               config: typeof node.config === 'object' && node.config ? node.config : { summary: node.config },
-              position: { x: 0, y: index * 120 },
+              position: node.position ?? { x: node.branchPath === 'Yes' ? 120 : node.branchPath === 'No' ? 520 : 320, y: index * 118 },
               branchRootId: node.branchRootId,
               branchPath: node.branchPath
             })),
-            edges: buildWorkflowEdges(nodes)
+            edges: workflowEdges.length ? workflowEdges : buildWorkflowEdges(nodes)
           }
         })
       });
@@ -542,6 +672,10 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
       type,
       label: type,
       config: defaultNodeConfig(type),
+      position: {
+        x: branchLabel === 'Yes' ? 120 : branchLabel === 'No' ? 520 : (parentNode?.position?.x ?? 320),
+        y: (parentNode?.position?.y ?? index * 118) + 118
+      },
       ...inheritedBranch,
       ...newBranch
     };
@@ -550,12 +684,28 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
       : [];
     const insertAt = branchIndexes.length ? Math.max(...branchIndexes) + 1 : index + 1;
     setNodes([...nodes.slice(0, insertAt), nextNode, ...nodes.slice(insertAt)]);
+    setWorkflowEdges((currentEdges) => [
+      ...currentEdges.filter((edge) => !(edge.sourceNodeId === parentNode?.id && edge.label === 'Then')),
+      ...(parentNode ? [{
+        edgeId: `edge-${parentNode.id}-${branchLabel ? branchLabel.toLowerCase() : 'then'}-${nextNode.id}`,
+        sourceNodeId: parentNode.id,
+        targetNodeId: nextNode.id,
+        label: branchLabel ?? 'Then',
+        condition: branchLabel ? { branch: branchLabel.toLowerCase(), result: branchLabel === 'Yes' ? 'true' : 'false' } : {}
+      }] : [])
+    ]);
     setSelectedNodeId(nextNode.id);
   };
 
   const cloneSelectedNode = (nodeToClone = selectedNode) => {
-    const clone = { ...nodeToClone, id: `${nodeToClone.id}-copy-${Date.now()}`, label: `${nodeToClone.label} Copy` };
+    const clone = {
+      ...nodeToClone,
+      id: `${nodeToClone.id}-copy-${Date.now()}`,
+      label: `${nodeToClone.label} Copy`,
+      position: nodeToClone.position ? { x: nodeToClone.position.x + 32, y: nodeToClone.position.y + 32 } : undefined
+    };
     setNodes([...nodes, clone]);
+    setWorkflowEdges((currentEdges) => [...currentEdges]);
     setSelectedNodeId(clone.id);
   };
 
@@ -563,11 +713,16 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
     if (nodeToDelete.type === 'Trigger') return;
     const nextNodes = nodes.filter((node) => node.id !== nodeToDelete.id);
     setNodes(nextNodes);
+    setWorkflowEdges((currentEdges) => currentEdges.filter((edge) => edge.sourceNodeId !== nodeToDelete.id && edge.targetNodeId !== nodeToDelete.id));
     setSelectedNodeId(nextNodes[0]?.id ?? '');
   };
 
   const updateSelectedNode = (patch: Partial<AutomationNode>) => {
     setNodes(nodes.map((node) => node.id === selectedNode.id ? { ...node, ...patch } : node));
+  };
+
+  const updateNodePosition = (nodeId: string, position: { x: number; y: number }) => {
+    setNodes((currentNodes) => currentNodes.map((node) => node.id === nodeId ? { ...node, position } : node));
   };
 
   const loadAssignmentData = useCallback(async () => {
@@ -637,10 +792,47 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
   useEffect(() => {
     if (!authToken) return;
     let cancelled = false;
+    async function loadAutomationOptions() {
+      try {
+        const [leadLists, taskLists, users, teams] = await Promise.all([
+          apiRequest<typeof defaultLeadLists>('/settings/lead-lists', { token: authToken }),
+          apiRequest<typeof defaultTaskLists>('/settings/task-lists', { token: authToken }),
+          apiRequest<any[]>('/access/users', { token: authToken }),
+          apiRequest<any[]>('/access/teams', { token: authToken })
+        ]);
+        if (cancelled) return;
+        setAutomationOptionSets({
+          leadLists: {
+            status: Array.isArray(leadLists?.status) ? leadLists.status : defaultLeadLists.status,
+            category: Array.isArray(leadLists?.category) ? leadLists.category : defaultLeadLists.category,
+            disposition: Array.isArray(leadLists?.disposition) ? leadLists.disposition : defaultLeadLists.disposition
+          },
+          taskLists: {
+            type: Array.isArray(taskLists?.type) ? taskLists.type : defaultTaskLists.type,
+            status: Array.isArray(taskLists?.status) ? taskLists.status : defaultTaskLists.status
+          },
+          users: Array.isArray(users) ? users.filter((user) => user?.isActive !== false).map((user) => ({ id: String(user.id), name: String(user.name ?? user.email ?? 'User') })) : [],
+          teams: Array.isArray(teams) ? teams.filter((team) => team?.isActive !== false).map((team) => ({ id: String(team.id), name: String(team.name ?? team.code ?? 'Team') })) : []
+        });
+      } catch {
+        if (!cancelled) setAutomationOptionSets(defaultAutomationOptionSets);
+      }
+    }
+    void loadAutomationOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken]);
+
+  useEffect(() => {
+    if (!authToken) return;
+    let cancelled = false;
     async function loadMappingFields() {
       try {
-        const payloads = await Promise.all(['Lead', 'User', 'Activity'].map((moduleName) => apiRequest<unknown>(`/custom-fields/definitions?moduleName=${moduleName}`, { token: authToken })));
-        if (!cancelled) setMappingFieldDefinitions(payloads.flatMap(normalizeCustomFieldDefinitions));
+        const modules = ['Lead', 'User', 'Activity'];
+        const payloads = await Promise.all(modules.map((moduleName) => apiRequest<unknown>(`/custom-fields/definitions?moduleName=${moduleName}`, { token: authToken })));
+        const definitions = payloads.flatMap((payload, index) => normalizeCustomFieldDefinitions(payload).map((field) => ({ ...field, moduleName: modules[index] })));
+        if (!cancelled) setMappingFieldDefinitions(definitions);
       } catch {
         if (!cancelled) setMappingFieldDefinitions([]);
       }
@@ -794,52 +986,79 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
           </>
         ) : (
           <>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-          <FormControl size="small" sx={{ minWidth: 260 }}>
-            <Select displayEmpty value={selectedWorkflowId} onChange={(event) => setSelectedWorkflowId(event.target.value)}>
-              <MenuItem value="">Select workflow</MenuItem>
-              {workflows.map((workflow) => <MenuItem key={workflow.id} value={workflow.id}>{workflow.name}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <TextField size="small" label="New workflow name" value={newWorkflowName} onChange={(event) => setNewWorkflowName(event.target.value)} />
-          <Button size="small" variant="outlined" disabled={!newWorkflowName.trim()} onClick={createWorkflow}>Create</Button>
-          <Button size="small" variant="outlined" disabled={!selectedWorkflowId} onClick={() => saveWorkflowDefinition(false)}>Save Draft</Button>
-          <Button size="small" variant="contained" disabled={!selectedWorkflowId} onClick={() => saveWorkflowDefinition(true)}>Publish</Button>
-        </Stack>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-          <FormControl size="small" sx={{ minWidth: 260 }}>
-            <Select displayEmpty value={workflowRunLeadId} onChange={(event) => setWorkflowRunLeadId(event.target.value)}>
-              <MenuItem value="">Run without lead context</MenuItem>
-              {leadRows.slice(0, 30).map((lead) => <MenuItem key={lead.dbId ?? lead.id} value={lead.dbId ?? lead.id}>{lead.name}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <Button size="small" variant="outlined" disabled={!selectedWorkflowId || !workflowRunLeadId} onClick={() => runSelectedWorkflow('test')}>Test Draft</Button>
-          <Button size="small" variant="outlined" disabled={!selectedWorkflowId} onClick={() => runSelectedWorkflow('published')}>Run Published</Button>
-          <Button size="small" variant="outlined" disabled={!selectedWorkflowId} onClick={() => runSelectedWorkflow('enqueue')}>Enqueue</Button>
-        </Stack>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-          <FormControl size="small" sx={{ minWidth: 360 }}>
-            <Select
-              multiple
-              displayEmpty
-              value={workflowRunLeadIds}
-              renderValue={(selected) => selected.length ? `${selected.length} selected leads` : 'Select leads for manual bulk run'}
-              onChange={(event) => setWorkflowRunLeadIds(typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value)}
-            >
-              {leadRows.slice(0, 100).map((lead) => {
-                const id = lead.dbId ?? lead.id;
-                return (
-                  <MenuItem key={id} value={id}>
-                    <Checkbox size="small" checked={workflowRunLeadIds.includes(id)} />
-                    <ListItemText primary={lead.name} />
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
-          <Button size="small" variant="outlined" disabled={!selectedWorkflowId || workflowRunLeadIds.length === 0} onClick={() => runSelectedWorkflow('manual')}>Manual Bulk Run</Button>
-        </Stack>
-        {runDetail ? (
+        <Box sx={{ border: '1px solid var(--crm-border)', borderRadius: '8px', bgcolor: 'background.paper', p: 0.75 }}>
+          <Stack direction={{ xs: 'column', lg: 'row' }} spacing={0.75} alignItems={{ xs: 'stretch', lg: 'center' }} justifyContent="space-between">
+            <Stack direction="row" spacing={0.65} alignItems="center" flexWrap="wrap" useFlexGap sx={{ minWidth: 0 }}>
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 320 } }}>
+                <Select displayEmpty value={selectedWorkflowId} onChange={(event) => setSelectedWorkflowId(event.target.value)}>
+                  <MenuItem value="">Create new automation</MenuItem>
+                  {workflows.map((workflow) => <MenuItem key={workflow.id} value={workflow.id}>{workflow.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+              {!selectedWorkflowId ? (
+                <>
+                  <TextField size="small" label="Workflow name" value={newWorkflowName} onChange={(event) => setNewWorkflowName(event.target.value)} sx={{ minWidth: { xs: '100%', sm: 260 } }} />
+                  <Button size="small" variant="contained" disabled={!newWorkflowName.trim()} onClick={createWorkflow}>Create</Button>
+                </>
+              ) : (
+                <>
+                  <AppChip label={`${nodes.length} nodes`} />
+                  <AppChip label={`${nodes.filter((node) => node.type === 'If/Else').length} conditions`} />
+                  <AppChip label={`${nodes.filter((node) => ['WhatsApp', 'Voicebot', 'API Call'].includes(node.type)).length} connectors`} />
+                  <AppChip label={`${assignmentRules.length} rules`} />
+                </>
+              )}
+            </Stack>
+            <Stack direction="row" spacing={0.65} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
+              <Button size="small" variant="outlined" disabled={!selectedWorkflowId} onClick={() => setRunDialogOpen(true)}>Run / Test</Button>
+              <Button size="small" variant="outlined" disabled={!selectedWorkflowId} onClick={() => saveWorkflowDefinition(false)}>Save Draft</Button>
+              <Button size="small" variant="contained" disabled={!selectedWorkflowId} onClick={() => saveWorkflowDefinition(true)}>Publish</Button>
+            </Stack>
+          </Stack>
+        </Box>
+        <FormDialog
+          open={runDialogOpen}
+          title="Run workflow"
+          subtitle="Test a draft, run the published workflow, enqueue it, or run manually for selected leads."
+          onClose={() => setRunDialogOpen(false)}
+          maxWidth="lg"
+          actions={[<Button key="close" variant="contained" onClick={() => setRunDialogOpen(false)}>Done</Button>]}
+        >
+          <Stack spacing={1}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+              <FormControl size="small" sx={{ minWidth: 280 }}>
+                <Select displayEmpty value={workflowRunLeadId} onChange={(event) => setWorkflowRunLeadId(event.target.value)}>
+                  <MenuItem value="">Run without lead context</MenuItem>
+                  {leadRows.slice(0, 30).map((lead) => <MenuItem key={lead.dbId ?? lead.id} value={lead.dbId ?? lead.id}>{lead.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <Button size="small" variant="outlined" disabled={!selectedWorkflowId || !workflowRunLeadId} onClick={() => runSelectedWorkflow('test')}>Test Draft</Button>
+              <Button size="small" variant="outlined" disabled={!selectedWorkflowId} onClick={() => runSelectedWorkflow('published')}>Run Published</Button>
+              <Button size="small" variant="outlined" disabled={!selectedWorkflowId} onClick={() => runSelectedWorkflow('enqueue')}>Enqueue</Button>
+            </Stack>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+              <FormControl size="small" sx={{ minWidth: 360 }}>
+                <Select
+                  multiple
+                  displayEmpty
+                  value={workflowRunLeadIds}
+                  renderValue={(selected) => selected.length ? `${selected.length} selected leads` : 'Select leads for manual bulk run'}
+                  onChange={(event) => setWorkflowRunLeadIds(typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value)}
+                >
+                  {leadRows.slice(0, 100).map((lead) => {
+                    const id = lead.dbId ?? lead.id;
+                    return (
+                      <MenuItem key={id} value={id}>
+                        <Checkbox size="small" checked={workflowRunLeadIds.includes(id)} />
+                        <ListItemText primary={lead.name} />
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+              <Button size="small" variant="outlined" disabled={!selectedWorkflowId || workflowRunLeadIds.length === 0} onClick={() => runSelectedWorkflow('manual')}>Manual Bulk Run</Button>
+            </Stack>
+            {runDetail ? (
           <Stack spacing={1}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1, border: '1px solid var(--crm-border)', borderRadius: '8px', bgcolor: 'var(--crm-paper-soft)', boxShadow: '0 8px 22px rgba(22, 39, 22, 0.04)' }}>
               <Box>
@@ -871,9 +1090,11 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
             </Stack>
           </Stack>
         ) : null}
-        <AutomationMetrics rows={automationSummary} />
+          </Stack>
+        </FormDialog>
         <AutomationEditor
             nodes={nodes}
+            edges={workflowEdges}
             selectedNode={selectedNode}
             selectedNodeId={selectedNodeId}
             nodeTypes={nodeTypes}
@@ -884,6 +1105,7 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
             cloneSelectedNode={cloneSelectedNode}
             deleteSelectedNode={deleteSelectedNode}
             updateSelectedNode={updateSelectedNode}
+            updateNodePosition={updateNodePosition}
             assignmentMessage={assignmentMessage}
             assignmentForm={assignmentForm}
             setAssignmentForm={setAssignmentForm}
@@ -907,6 +1129,7 @@ export function AutomationView({ automationRows: initialAutomationRows = [], aut
             automationRows={automationRows}
             connectorOverview={connectorOverview}
             mappingFields={automationMappingFields}
+            optionSets={automationOptionSets}
             activityTypes={activityTypes}
             activityFieldDefinitions={mappingFieldDefinitions.filter((field) => normalizeMappingModuleName(field.moduleName) === 'activity')}
           />
