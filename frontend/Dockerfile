@@ -14,7 +14,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/frontend/node_modules ./frontend/node_modules
 COPY frontend ./frontend
 WORKDIR /app/frontend
 RUN test -n "$NEXT_PUBLIC_API_URL"
