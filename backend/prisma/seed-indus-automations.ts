@@ -43,6 +43,14 @@ function node(nodeId: string, nodeType: string, label: string, config: Record<st
   return { nodeId, nodeType, label, config };
 }
 
+function leadUpdateConfig(updates: Array<{ field: string; value: string }>) {
+  return {
+    field: updates[0]?.field ?? 'status',
+    value: updates[0]?.value ?? '',
+    updates
+  };
+}
+
 function edge(sourceNodeId: string, targetNodeId: string, label = 'Then', condition: Record<string, unknown> = {}) {
   return { edgeId: `edge_${sourceNodeId}_${targetNodeId}_${label.toLowerCase()}`, sourceNodeId, targetNodeId, label, condition };
 }
@@ -245,13 +253,11 @@ function offerJourneyDefinition(templateIds: Record<string, string>, voicebotTem
     exitCondition: exitCondition(4),
     nodes: [
       node('trigger_upload', 'Trigger', 'Lead Uploaded', { trigger: 'Lead uploaded' }),
-      node('mark_active', 'Lead Update', 'Start Loan Journey', {
-        updates: [
+      node('mark_active', 'Lead Update', 'Start Loan Journey', leadUpdateConfig([
           { field: 'status', value: 'Automation Active' },
           { field: 'category', value: 'Warm Lead' },
           { field: 'automationStatus', value: 'WhatsApp Offer Sent' }
-        ]
-      }),
+      ])),
       node('send_offer', 'WhatsApp', 'Send First Loan Offer', {
         templateId: templateIds.offer,
         variableMapping: {
@@ -347,14 +353,12 @@ function positiveResponseDefinition(templateIds: Record<string, string>): Workfl
           { fieldPath: 'whatsapp.button', operator: 'contains', value: 'Callback' }
         ]
       }),
-      node('mark_assigned', 'Lead Update', 'Mark Ready For Human Follow-up', {
-        updates: [
+      node('mark_assigned', 'Lead Update', 'Mark Ready For Human Follow-up', leadUpdateConfig([
           { field: 'status', value: 'Assigned' },
           { field: 'category', value: 'Hot Lead' },
           { field: 'disposition', value: 'Interested' },
           { field: 'automationStatus', value: 'Human Follow-up Required' }
-        ]
-      }),
+      ])),
       node('assign_partner', 'Assignment', 'Assign Partner', { mode: 'full_engine' }),
       node('send_callback_confirmation', 'WhatsApp', 'Send Callback Confirmation', {
         templateId: templateIds.callback,
@@ -392,13 +396,11 @@ function voicebotIntentDefinition(): WorkflowDefinition {
         operator: 'in',
         value: 'Interested, Callback Scheduled, Documents Pending, Already Applied'
       }),
-      node('mark_warm', 'Lead Update', 'Mark Warm Lead', {
-        updates: [
+      node('mark_warm', 'Lead Update', 'Mark Warm Lead', leadUpdateConfig([
           { field: 'status', value: 'Assigned' },
           { field: 'category', value: 'Warm Lead' },
           { field: 'automationStatus', value: 'Voicebot Qualified' }
-        ]
-      }),
+      ])),
       node('assign_partner', 'Assignment', 'Assign Partner', { mode: 'full_engine' }),
       node('partner_task', 'Task', 'Create Voicebot Follow-up Task', {
         taskType: 'Follow-up',
@@ -413,14 +415,12 @@ function voicebotIntentDefinition(): WorkflowDefinition {
         operator: 'in',
         value: 'Not Interested, Wrong Number, Do Not Contact'
       }),
-      node('mark_closed', 'Lead Update', 'Close Negative Intent', {
-        updates: [
+      node('mark_closed', 'Lead Update', 'Close Negative Intent', leadUpdateConfig([
           { field: 'status', value: 'Assigned' },
           { field: 'category', value: 'Not Interested' },
           { field: 'disposition', value: '{{voicebot.disposition}}' },
           { field: 'automationStatus', value: 'Voicebot Closed' }
-        ]
-      }),
+      ])),
       node('stop_voicebot', 'Stop', 'Stop Voicebot Route', { reason: 'voicebot_closed_or_no_response' })
     ],
     edges: [
@@ -498,13 +498,11 @@ function smokeDefinition(): WorkflowDefinition {
     nodes: [
       node('trigger_smoke', 'Trigger', 'Lead Created', { trigger: 'Lead created' }),
       node('has_branch', 'If/Else', 'Has Branch Mapping', { fieldPath: 'lead.branchCode', operator: 'exists', value: '', branchMode: 'all' }),
-      node('mark_smoke', 'Lead Update', 'Mark Smoke Qualified', {
-        updates: [
+      node('mark_smoke', 'Lead Update', 'Mark Smoke Qualified', leadUpdateConfig([
           { field: 'status', value: 'Assigned' },
           { field: 'category', value: 'Callback Requested' },
           { field: 'automationStatus', value: 'Smoke Tested' }
-        ]
-      }),
+      ])),
       node('create_task', 'Task', 'Create Smoke Follow-up Task', {
         taskType: 'Callback',
         priority: 'Medium',
