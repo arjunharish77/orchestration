@@ -130,19 +130,23 @@ export class AuthController {
 
   private writeAuthCookies(response: CookieResponse, payload: unknown) {
     if (!isAuthTokenResponse(payload)) return;
+    const csrfCookieDomain = this.csrfCookieDomain();
     const cookies = [
       buildCookie('unnatify_access_token', payload.accessToken, this.accessTokenMaxAgeSeconds(), this.cookieSecure()),
       payload.refreshToken ? buildCookie('unnatify_refresh_token', payload.refreshToken, this.refreshTokenMaxAgeSeconds(), this.cookieSecure()) : null,
-      buildCookie('unnatify_csrf_token', randomBytes(24).toString('hex'), this.refreshTokenMaxAgeSeconds(), this.cookieSecure(), false, 'Strict')
+      csrfCookieDomain ? buildCookie('unnatify_csrf_token', '', 0, this.cookieSecure(), false, 'Strict') : null,
+      buildCookie('unnatify_csrf_token', randomBytes(24).toString('hex'), this.refreshTokenMaxAgeSeconds(), this.cookieSecure(), false, 'Strict', csrfCookieDomain)
     ].filter(Boolean) as string[];
     response.setHeader('Set-Cookie', cookies);
   }
 
   private clearAuthCookies(response: CookieResponse) {
+    const csrfCookieDomain = this.csrfCookieDomain();
     response.setHeader('Set-Cookie', [
       buildCookie('unnatify_access_token', '', 0, this.cookieSecure()),
       buildCookie('unnatify_refresh_token', '', 0, this.cookieSecure()),
-      buildCookie('unnatify_csrf_token', '', 0, this.cookieSecure(), false, 'Strict')
+      buildCookie('unnatify_csrf_token', '', 0, this.cookieSecure(), false, 'Strict'),
+      buildCookie('unnatify_csrf_token', '', 0, this.cookieSecure(), false, 'Strict', csrfCookieDomain)
     ]);
   }
 
@@ -158,6 +162,15 @@ export class AuthController {
   private cookieSecure() {
     const appUrl = this.config.get<string>('APP_URL') ?? '';
     return this.config.get<string>('NODE_ENV') === 'production' || appUrl.startsWith('https://');
+  }
+
+  private csrfCookieDomain() {
+    const configured = this.config.get<string>('CSRF_COOKIE_DOMAIN')?.trim();
+    if (configured) return configured;
+    const appUrl = this.config.get<string>('APP_URL') ?? '';
+    const apiUrl = this.config.get<string>('API_URL') ?? '';
+    const parentDomain = sharedParentDomain(appUrl, apiUrl);
+    return parentDomain ? `.${parentDomain}` : undefined;
   }
 }
 
@@ -180,7 +193,7 @@ function readCookie(value: string | string[] | undefined, name: string) {
   return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null;
 }
 
-function buildCookie(name: string, value: string, maxAgeSeconds: number, secure: boolean, httpOnly = true, sameSite: 'Lax' | 'Strict' = 'Lax') {
+function buildCookie(name: string, value: string, maxAgeSeconds: number, secure: boolean, httpOnly = true, sameSite: 'Lax' | 'Strict' = 'Lax', domain?: string) {
   const parts = [
     `${name}=${encodeURIComponent(value)}`,
     'Path=/',
@@ -189,7 +202,30 @@ function buildCookie(name: string, value: string, maxAgeSeconds: number, secure:
   ];
   if (httpOnly) parts.push('HttpOnly');
   if (secure) parts.push('Secure');
+  if (domain) parts.push(`Domain=${domain}`);
   return parts.join('; ');
+}
+
+function sharedParentDomain(appUrl: string, apiUrl: string) {
+  const appHost = hostnameFromUrl(appUrl);
+  const apiHost = hostnameFromUrl(apiUrl);
+  if (!appHost || !apiHost || appHost === apiHost) return undefined;
+  const appParts = appHost.split('.');
+  const apiParts = apiHost.split('.');
+  const shared: string[] = [];
+  while (appParts.length && apiParts.length && appParts[appParts.length - 1] === apiParts[apiParts.length - 1]) {
+    shared.unshift(appParts.pop() as string);
+    apiParts.pop();
+  }
+  return shared.length >= 2 ? shared.join('.') : undefined;
+}
+
+function hostnameFromUrl(value: string) {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return undefined;
+  }
 }
 
 function parseDurationSeconds(value: string, fallback: number) {
