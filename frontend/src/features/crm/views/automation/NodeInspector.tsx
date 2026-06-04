@@ -6,6 +6,7 @@ import { Box, Button, Divider, FormControl, IconButton, MenuItem, Paper, Select,
 import type { ReactNode } from 'react';
 import { AppChip } from '../../../../components/common/AppChip';
 import { ExitConditionConfig } from './AutomationCanvas';
+import type { AutomationOptionSets } from './AutomationEditor';
 
 type AutomationNode = {
   id: string;
@@ -34,13 +35,13 @@ const conditionFieldOptions = [
   ['lead.status', 'Lead Status'],
   ['lead.category', 'Lead Category'],
   ['lead.disposition', 'Lead Disposition'],
+  ['lead.assignedUserId', 'Lead Owner'],
   ['lead.branchCode', 'Branch Code'],
   ['lead.branchName', 'Branch Name'],
   ['lead.preferredLanguage', 'Preferred Language'],
   ['lead.offerAmount', 'Loan Offer Amount'],
   ['lead.emiAmount', 'EMI Amount'],
-  ['lead.location', 'Customer Location'],
-  ['lead.custom', 'Lead Custom Field']
+  ['lead.location', 'Customer Location']
 ];
 const leadUpdateFields = [
   ['status', 'Lead Status'],
@@ -51,7 +52,20 @@ const leadUpdateFields = [
   ['automationStatus', 'Automation Status'],
   ['partnerMapping', 'Partner Mapping']
 ];
-const operators = ['equals', 'not_equals', 'contains', 'exists', 'in', 'not_in', 'gt', 'gte', 'lt', 'lte'];
+const operators = ['equals', 'not_equals', 'contains', 'exists', 'not_exists', 'in', 'not_in', 'gt', 'gte', 'lt', 'lte'];
+const operatorLabels: Record<string, string> = {
+  equals: 'Equals',
+  not_equals: 'Does not equal',
+  contains: 'Contains',
+  exists: 'Has any value',
+  not_exists: 'Is empty',
+  in: 'Is one of',
+  not_in: 'Is not one of',
+  gt: 'Greater than',
+  gte: 'Greater than or equal',
+  lt: 'Less than',
+  lte: 'Less than or equal'
+};
 const branchModes = [
   ['all', 'Match all conditions'],
   ['any', 'Match any condition']
@@ -59,6 +73,12 @@ const branchModes = [
 const exitStatusOptions = ['Converted', 'Expired', 'No Response', 'Not Interested'];
 const exitDispositionOptions = ['Converted', 'Not Interested', 'Wrong Number', 'Expired', 'No Response'];
 const templateFieldOptions = ['lead.customerName', 'lead.mobile', 'lead.status', 'lead.category', 'lead.branchCode', 'lead.branchName', 'lead.offerAmount', 'lead.emiAmount', 'lead.preferredLanguage', 'user.name', 'user.phone', 'user.email', 'activity.disposition'];
+const emptyOptionSets: AutomationOptionSets = {
+  leadLists: { status: [], category: [], disposition: [] },
+  taskLists: { type: [], status: [] },
+  users: [],
+  teams: []
+};
 
 export function NodeInspector({
   selectedNode,
@@ -71,6 +91,7 @@ export function NodeInspector({
   assignmentRules,
   connectorOverview,
   mappingFields = [],
+  optionSets = emptyOptionSets,
   activityTypes = [],
   activityFieldDefinitions = []
 }: {
@@ -84,6 +105,7 @@ export function NodeInspector({
   assignmentRules: any[];
   connectorOverview: any;
   mappingFields?: MappingField[];
+  optionSets?: AutomationOptionSets;
   activityTypes?: Array<{ code: string; label: string; isActive?: boolean }>;
   activityFieldDefinitions?: ActivityFieldDefinition[];
 }) {
@@ -91,7 +113,7 @@ export function NodeInspector({
   const updateConfig = (patch: Record<string, unknown>) => updateSelectedNode({ config: { ...config, ...patch } });
   const selectedActivityType = String(config.type ?? '008').padStart(3, '0');
   const createActivityFields = activityFieldDefinitions.filter((field) => {
-    const scope = field.activityTypeCode || 'ALL';
+    const scope = field.activityTypeCode && field.activityTypeCode !== 'ALL' ? String(field.activityTypeCode).padStart(3, '0') : 'ALL';
     return scope === 'ALL' || scope === selectedActivityType;
   });
   const whatsAppTemplates = connectorOverview.whatsAppTemplates ?? [];
@@ -128,13 +150,13 @@ export function NodeInspector({
       <Stack spacing={1}>
         <InspectorPanel title={`${selectedNode.type} settings`}>
           {selectedNode.type === 'Trigger' ? <TriggerEditor config={config} updateConfig={updateConfig} /> : null}
-          {selectedNode.type === 'If/Else' ? <ConditionBuilder config={config} updateConfig={updateConfig} mappingFields={mappingFields} /> : null}
+          {selectedNode.type === 'If/Else' ? <ConditionBuilder config={config} updateConfig={updateConfig} mappingFields={mappingFields} optionSets={optionSets} /> : null}
           {selectedNode.type === 'Delay' ? <DelayEditor config={config} updateConfig={updateConfig} /> : null}
           {selectedNode.type === 'Assignment' ? <AssignmentEditor config={config} updateConfig={updateConfig} assignmentRules={assignmentRules} /> : null}
           {selectedNode.type === 'WhatsApp' ? <TemplateMappingEditor title="WhatsApp template" templates={whatsAppTemplates} selectedTemplate={selectedWhatsAppTemplate} config={config} updateConfig={updateConfig} mappingFields={mappingFields} /> : null}
           {selectedNode.type === 'Voicebot' ? <TemplateMappingEditor title="Voicebot trigger" templates={voicebotTemplates} selectedTemplate={selectedVoicebotTemplate} config={config} updateConfig={updateConfig} mappingFields={mappingFields} /> : null}
-          {selectedNode.type === 'Task' ? <TaskEditor config={config} updateConfig={updateConfig} mappingFields={mappingFields} /> : null}
-          {selectedNode.type === 'Lead Update' ? <LeadUpdateEditor config={config} updateConfig={updateConfig} mappingFields={mappingFields} /> : null}
+          {selectedNode.type === 'Task' ? <TaskEditor config={config} updateConfig={updateConfig} optionSets={optionSets} /> : null}
+          {selectedNode.type === 'Lead Update' ? <LeadUpdateEditor config={config} updateConfig={updateConfig} mappingFields={mappingFields} optionSets={optionSets} /> : null}
           {selectedNode.type === 'Create Activity' ? <CreateActivityEditor config={config} updateConfig={updateConfig} selectedActivityType={selectedActivityType} activityTypes={activityTypes} activityFields={createActivityFields} mappingFields={mappingFields} /> : null}
           {selectedNode.type === 'API Call' ? <ApiCallEditor config={config} updateConfig={updateConfig} apiConnectors={apiConnectors} selectedApiConnector={selectedApiConnector} mappingFields={mappingFields} /> : null}
           {['Mark Expired', 'Notify', 'Stop', 'Pause', 'Resume'].includes(selectedNode.type) ? <SimpleConfigEditor config={config} updateSelectedNode={updateSelectedNode} /> : null}
@@ -205,7 +227,7 @@ function AssignmentEditor({ config, updateConfig, assignmentRules }: { config: R
   );
 }
 
-function ConditionBuilder({ config, updateConfig, mappingFields }: { config: Record<string, any>; updateConfig: (patch: Record<string, unknown>) => void; mappingFields: MappingField[] }) {
+function ConditionBuilder({ config, updateConfig, mappingFields, optionSets }: { config: Record<string, any>; updateConfig: (patch: Record<string, unknown>) => void; mappingFields: MappingField[]; optionSets: AutomationOptionSets }) {
   const groups = Array.isArray(config.groups) ? config.groups : [];
   const fields = [...conditionFieldOptions.map(([value, label]) => ({ value, label })), ...mappingFields.filter((field) => field.value.startsWith('lead.custom.'))];
   const conditions = [{ fieldPath: config.fieldPath ?? 'lead.status', operator: config.operator ?? 'equals', value: config.value ?? '' }, ...groups];
@@ -228,15 +250,42 @@ function ConditionBuilder({ config, updateConfig, mappingFields }: { config: Rec
             {fields.map((field) => <MenuItem key={field.value} value={field.value}>{field.label}</MenuItem>)}
           </SelectField>
           <SelectField value={condition.operator ?? 'equals'} onChange={(value) => updateConditionAt(index, { operator: value })}>
-            {operators.map((operator) => <MenuItem key={operator} value={operator}>{operator.replace(/_/g, ' ')}</MenuItem>)}
+            {operators.map((operator) => <MenuItem key={operator} value={operator}>{operatorLabels[operator] ?? operator.replace(/_/g, ' ')}</MenuItem>)}
           </SelectField>
-          <TextField size="small" label={condition.operator === 'in' || condition.operator === 'not_in' ? 'Values, comma separated' : 'Value'} value={condition.value ?? ''} disabled={['exists', 'not_exists'].includes(condition.operator)} onChange={(event) => updateConditionAt(index, { value: event.target.value })} />
+          <ConditionValueInput condition={condition} optionSets={optionSets} onChange={(value) => updateConditionAt(index, { value })} />
           <IconButton size="small" disabled={index === 0} onClick={() => updateConfig({ groups: groups.filter((_: any, groupIndex: number) => groupIndex !== index - 1) })}><DeleteOutlineIcon fontSize="small" /></IconButton>
         </Box>
       ))}
       <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => updateConfig({ groups: [...groups, { fieldPath: 'lead.status', operator: 'equals', value: '' }] })}>Add condition</Button>
     </Stack>
   );
+}
+
+function ConditionValueInput({ condition, optionSets, onChange }: { condition: Record<string, any>; optionSets: AutomationOptionSets; onChange: (value: string) => void }) {
+  const operator = String(condition.operator ?? 'equals');
+  const fieldPath = String(condition.fieldPath ?? '');
+  const options = valueOptionsForField(fieldPath, optionSets);
+  const value = String(condition.value ?? '');
+  if (['exists', 'not_exists'].includes(operator)) {
+    return <TextField size="small" label="Value not required" value="" disabled />;
+  }
+  if (options.length > 0 && ['equals', 'not_equals'].includes(operator)) {
+    return (
+      <SelectField value={value} onChange={onChange}>
+        <MenuItem value="">Select value</MenuItem>
+        {options.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
+      </SelectField>
+    );
+  }
+  if (options.length > 0 && ['in', 'not_in'].includes(operator)) {
+    const selected = value ? value.split(',').map((item) => item.trim()).filter(Boolean) : [];
+    return (
+      <SelectField multiple value={selected} renderValue={(items) => items.length ? items.join(', ') : 'Select values'} onChange={(next) => onChange(normalizeMultiValue(next).join(', '))}>
+        {options.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
+      </SelectField>
+    );
+  }
+  return <TextField size="small" label={operator === 'in' || operator === 'not_in' ? 'Values, comma separated' : 'Value'} value={value} onChange={(event) => onChange(event.target.value)} />;
 }
 
 function TemplateMappingEditor({ title, templates, selectedTemplate, config, updateConfig, mappingFields }: { title: string; templates: any[]; selectedTemplate: any; config: Record<string, any>; updateConfig: (patch: Record<string, unknown>) => void; mappingFields: MappingField[] }) {
@@ -255,7 +304,7 @@ function TemplateMappingEditor({ title, templates, selectedTemplate, config, upd
       {variables.length ? (
         <Box sx={{ display: 'grid', gap: 0.75, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' } }}>
           {variables.map((variable: any) => (
-            <MappingRow key={variable.variableKey} label={variable.variableKey} value={variableMapping[variable.variableKey] ?? ''} fields={fields} onChange={(value) => updateConfig({ variableMapping: { ...variableMapping, [variable.variableKey]: value } })} />
+            <MappingRow key={variable.variableKey} label={variable.displayName || humanizeTemplateKey(variable.variableKey)} value={variableMapping[variable.variableKey] ?? ''} fields={fields} onChange={(value) => updateConfig({ variableMapping: { ...variableMapping, [variable.variableKey]: value } })} />
           ))}
         </Box>
       ) : <Typography fontSize={13} color="text.secondary">Select a saved template to map variables.</Typography>}
@@ -263,25 +312,26 @@ function TemplateMappingEditor({ title, templates, selectedTemplate, config, upd
   );
 }
 
-function TaskEditor({ config, updateConfig, mappingFields }: { config: Record<string, any>; updateConfig: (patch: Record<string, unknown>) => void; mappingFields: MappingField[] }) {
-  const userFields = mappingFields.filter((field) => field.value.startsWith('user.'));
+function TaskEditor({ config, updateConfig, optionSets }: { config: Record<string, any>; updateConfig: (patch: Record<string, unknown>) => void; optionSets: AutomationOptionSets }) {
   return (
     <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
-      <TextField size="small" label="Task type" value={config.taskType ?? 'Follow-up'} onChange={(event) => updateConfig({ taskType: event.target.value })} />
+      <SelectField value={config.taskType ?? 'Follow-up'} onChange={(value) => updateConfig({ taskType: value })}>
+        {(optionSets.taskLists.type.length ? optionSets.taskLists.type : ['Follow-up', 'Callback', 'Document Collection', 'Call', 'Meeting', 'Reminder']).map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}
+      </SelectField>
       <SelectField value={config.priority ?? 'Medium'} onChange={(value) => updateConfig({ priority: value })}>
         {['Low', 'Medium', 'High'].map((priority) => <MenuItem key={priority} value={priority}>{priority}</MenuItem>)}
       </SelectField>
       <TextField size="small" type="number" label="Due in days" value={config.dueInDays ?? 1} onChange={(event) => updateConfig({ dueInDays: Number(event.target.value) })} />
       <SelectField value={config.assignedTo ?? ''} onChange={(value) => updateConfig({ assignedTo: value })}>
         <MenuItem value="">Use lead owner</MenuItem>
-        {userFields.map((field) => <MenuItem key={field.value} value={field.value}>{field.label}</MenuItem>)}
+        {optionSets.users.map((user) => <MenuItem key={user.id} value={user.id}>{user.name}</MenuItem>)}
       </SelectField>
       <TextField size="small" multiline minRows={2} label="Remarks" value={config.remarks ?? ''} onChange={(event) => updateConfig({ remarks: event.target.value })} sx={{ gridColumn: '1 / -1' }} />
     </Box>
   );
 }
 
-function LeadUpdateEditor({ config, updateConfig, mappingFields }: { config: Record<string, any>; updateConfig: (patch: Record<string, unknown>) => void; mappingFields: MappingField[] }) {
+function LeadUpdateEditor({ config, updateConfig, mappingFields, optionSets }: { config: Record<string, any>; updateConfig: (patch: Record<string, unknown>) => void; mappingFields: MappingField[]; optionSets: AutomationOptionSets }) {
   const customLeadFields = mappingFields.filter((field) => field.value.startsWith('lead.custom.'));
   const updateRows = normalizeUpdateRows(config);
   const fields = [...leadUpdateFields.map(([value, label]) => ({ value, label })), ...customLeadFields];
@@ -293,7 +343,7 @@ function LeadUpdateEditor({ config, updateConfig, mappingFields }: { config: Rec
           <SelectField value={row.field} onChange={(value) => setRows(updateRows.map((item, itemIndex) => itemIndex === index ? { ...item, field: value } : item))}>
             {fields.map((field) => <MenuItem key={field.value} value={field.value}>{field.label}</MenuItem>)}
           </SelectField>
-          <TextField size="small" label="New value or {{variable}}" value={row.value} onChange={(event) => setRows(updateRows.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} />
+          <LeadUpdateValueInput field={row.field} value={row.value} optionSets={optionSets} onChange={(value) => setRows(updateRows.map((item, itemIndex) => itemIndex === index ? { ...item, value } : item))} />
           <IconButton size="small" disabled={updateRows.length === 1} onClick={() => setRows(updateRows.filter((_, itemIndex) => itemIndex !== index))}><DeleteOutlineIcon fontSize="small" /></IconButton>
         </Box>
       ))}
@@ -302,9 +352,22 @@ function LeadUpdateEditor({ config, updateConfig, mappingFields }: { config: Rec
   );
 }
 
+function LeadUpdateValueInput({ field, value, optionSets, onChange }: { field: string; value: string; optionSets: AutomationOptionSets; onChange: (value: string) => void }) {
+  const options = valueOptionsForLeadUpdateField(field, optionSets);
+  if (options.length > 0) {
+    return (
+      <SelectField value={value} onChange={onChange}>
+        <MenuItem value="">Select value</MenuItem>
+        {options.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
+      </SelectField>
+    );
+  }
+  return <TextField size="small" label="New value or {{variable}}" value={value} onChange={(event) => onChange(event.target.value)} />;
+}
+
 function CreateActivityEditor({ config, updateConfig, selectedActivityType, activityTypes, activityFields, mappingFields }: { config: Record<string, any>; updateConfig: (patch: Record<string, unknown>) => void; selectedActivityType: string; activityTypes: Array<{ code: string; label: string; isActive?: boolean }>; activityFields: ActivityFieldDefinition[]; mappingFields: MappingField[] }) {
   const customFields = typeof config.customFields === 'object' && config.customFields ? config.customFields : {};
-  const mappedKeys = Object.keys(customFields).filter((key) => customFields[key]);
+  const mappedKeys = Object.keys(customFields).filter((key) => String(key).trim());
   const availableFields = activityFields.filter((field) => String(field.fieldKey ?? '').trim());
   const addableField = availableFields.find((field) => !mappedKeys.includes(String(field.fieldKey)));
   const setCustomFields = (next: Record<string, unknown>) => updateConfig({ customFields: next });
@@ -319,7 +382,9 @@ function CreateActivityEditor({ config, updateConfig, selectedActivityType, acti
       </Box>
       <Divider />
       <Typography fontWeight={850} fontSize={13}>Activity field mappings</Typography>
-      {mappedKeys.length ? mappedKeys.map((fieldKey) => {
+      {availableFields.length === 0 ? (
+        <Typography fontSize={13} color="text.secondary">No active custom activity fields are configured for this activity type.</Typography>
+      ) : mappedKeys.length ? mappedKeys.map((fieldKey) => {
         const field = availableFields.find((item) => item.fieldKey === fieldKey);
         return (
           <Box key={fieldKey} sx={{ display: 'grid', gap: 0.75, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 34px' }, alignItems: 'center' }}>
@@ -420,6 +485,28 @@ function normalizeUpdateRows(config: Record<string, any>) {
   return [{ field: String(config.field ?? 'status'), value: String(config.value ?? 'In Progress') }];
 }
 
+function optionItems(values: string[], fallback: string[] = []) {
+  const source = values.length ? values : fallback;
+  return source.filter(Boolean).map((value) => ({ value, label: value }));
+}
+
+function valueOptionsForField(fieldPath: string, optionSets: AutomationOptionSets) {
+  if (fieldPath === 'lead.status') return optionItems(optionSets.leadLists.status, ['New', 'Assigned', 'In Progress', 'Converted', 'Expired']);
+  if (fieldPath === 'lead.category') return optionItems(optionSets.leadLists.category, ['Hot', 'Warm Lead', 'Cold']);
+  if (fieldPath === 'lead.disposition') return optionItems(optionSets.leadLists.disposition, ['Converted', 'Not Interested', 'Wrong Number', 'No Response']);
+  if (fieldPath === 'user.id' || fieldPath === 'lead.assignedUserId') return optionSets.users.map((user) => ({ value: user.id, label: user.name }));
+  return [];
+}
+
+function valueOptionsForLeadUpdateField(field: string, optionSets: AutomationOptionSets) {
+  if (field === 'status') return optionItems(optionSets.leadLists.status, ['New', 'Assigned', 'In Progress', 'Converted', 'Expired']);
+  if (field === 'category') return optionItems(optionSets.leadLists.category, ['Hot', 'Warm Lead', 'Cold']);
+  if (field === 'disposition') return optionItems(optionSets.leadLists.disposition, ['Converted', 'Not Interested', 'Wrong Number', 'No Response']);
+  if (field === 'assignedUserId') return optionSets.users.map((user) => ({ value: user.id, label: user.name }));
+  if (field === 'assignedTeamId') return optionSets.teams.map((team) => ({ value: team.id, label: team.name }));
+  return [];
+}
+
 function defaultConfigForType(type: string) {
   if (type === 'Trigger') return { trigger: 'Lead created' };
   if (type === 'If/Else') return { fieldPath: 'lead.status', operator: 'equals', value: 'New', branchMode: 'all', groups: [] };
@@ -460,6 +547,13 @@ function extractTemplateVariables(value: unknown): string[] {
   };
   visit(value);
   return Array.from(new Set(values)).sort();
+}
+
+function humanizeTemplateKey(value: string) {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function normalizeMultiValue(value: string | string[]) {
